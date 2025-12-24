@@ -29,33 +29,30 @@ type Authentication struct {
 }
 
 type RestClient struct {
-	baseURL string
-	auth    Authentication
+	baseURL  string
+	endpoint string
+	auth     Authentication
 
 	httpClient *resty.Client
 }
 
-func (c *RestClient) endpoint() string {
-	return strings.Trim(c.baseURL, "/") + "/wp-json/"
+func (api *RestClient) close() {
+	api.httpClient.Close()
 }
 
-func (c *RestClient) close() {
-	c.httpClient.Close()
+func (api *RestClient) WithBasicAuth(username, password string) *RestClient {
+	api.auth.Username = username
+	api.auth.Password = password
+	return api
 }
 
-func (c *RestClient) WithBasicAuth(username, password string) *RestClient {
-	c.auth.Username = username
-	c.auth.Password = password
-	return c
-}
-
-func (c *RestClient) Discover() (info BlogInfo, err error) {
-	_, err = c.httpClient.R().
+func (api *RestClient) Discover() (info BlogInfo, err error) {
+	_, err = api.httpClient.R().
 		SetHeader("Accept", "application/json").
 		SetResult(&info).
-		Get(c.endpoint())
+		Get(api.endpoint)
 
-	defer c.httpClient.Close()
+	defer api.httpClient.Close()
 
 	if err != nil {
 		return
@@ -66,5 +63,8 @@ func (c *RestClient) Discover() (info BlogInfo, err error) {
 
 func NewClient(baseURL string) *RestClient {
 	client := resty.New()
-	return &RestClient{baseURL: baseURL, httpClient: client}
+	return &RestClient{
+		baseURL:    baseURL,
+		endpoint:   strings.Trim(baseURL, "/") + "/wp-json",
+		httpClient: client}
 }
