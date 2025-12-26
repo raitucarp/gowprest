@@ -11,6 +11,8 @@ import (
 func TestNewClient(t *testing.T) {
 	blogUrl := os.Getenv("BLOG_URL")
 	client := gowprest.NewClient(blogUrl)
+	defer client.Close()
+
 	blogInfo, err := client.Discover()
 
 	assert(t, err != nil, "Something error %v", err)

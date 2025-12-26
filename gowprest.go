@@ -17,7 +17,7 @@ type BlogInfo struct {
 	PageOnFront    int      `json:"page_on_front"`
 	ShowOnFront    string   `json:"show_on_front"`
 	Namespaces     []string `json:"namespaces"`
-	Authentication []string `json:"authentication"`
+	Authentication any      `json:"authentication"`
 	SiteLogo       int      `json:"site_logo"`
 	SiteIcon       int      `json:"site_icon"`
 	SiteIconURL    string   `json:"site_icon_url"`
@@ -36,7 +36,7 @@ type RestClient struct {
 	httpClient *resty.Client
 }
 
-func (api *RestClient) close() {
+func (api *RestClient) Close() {
 	api.httpClient.Close()
 }
 
@@ -51,8 +51,6 @@ func (api *RestClient) Discover() (info BlogInfo, err error) {
 		SetHeader("Accept", "application/json").
 		SetResult(&info).
 		Get(api.endpoint)
-
-	defer api.httpClient.Close()
 
 	if err != nil {
 		return
