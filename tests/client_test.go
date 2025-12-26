@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
@@ -14,9 +13,6 @@ func TestNewClient(t *testing.T) {
 	client := gowprest.NewClient(blogUrl)
 	blogInfo, err := client.Discover()
 
-	if err != nil {
-		t.Errorf("Something error %v", err)
-	}
-
-	fmt.Println(blogInfo)
+	assert(t, err != nil, "Something error %v", err)
+	assert(t, blogInfo.Home != blogUrl, "Blog url not equal, expected %s, got %s", blogUrl, blogInfo.Home)
 }

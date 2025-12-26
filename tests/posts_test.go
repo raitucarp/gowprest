@@ -17,13 +17,8 @@ func TestListPosts(t *testing.T) {
 		listPost = listPost.Search("test")
 		posts, err := listPost.Get()
 
-		if err != nil {
-			t.Errorf("Something error %v", err)
-		}
-
-		if len(posts) > 0 {
-			t.Errorf("Post should not return anything")
-		}
+		assert(t, err != nil, "Something error %v", err)
+		assert(t, len(posts) > 0, "Post should not return anything")
 	})
 
 	t.Run("default post list", func(t *testing.T) {
@@ -31,13 +26,8 @@ func TestListPosts(t *testing.T) {
 		listPost := client.Posts().List()
 		posts, err := listPost.Get()
 
-		if err != nil {
-			t.Errorf("Something error %v", err)
-		}
-
-		if len(posts) <= 0 {
-			t.Errorf("Post should return at least one post")
-		}
+		assert(t, err != nil, "Something error %v", err)
+		assert(t, len(posts) <= 0, "Post should return at least one post")
 	})
 
 }
