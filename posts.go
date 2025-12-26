@@ -381,3 +381,55 @@ func (api *CreatePostAPI) Post() (post Post, err error) {
 
 	return
 }
+
+type PostAPI struct {
+	endpoint  string
+	client    *RestClient
+	postId    int
+	arguments map[string]string
+}
+
+func (api *PostsAPI) Retrieve(postId int) *PostAPI {
+	return &PostAPI{
+		endpoint:  "/wp/v2/posts",
+		client:    api.client,
+		postId:    postId,
+		arguments: make(map[string]string),
+	}
+}
+
+func (api *PostAPI) ContextView() *PostAPI {
+	api.arguments["context"] = "view"
+	return api
+}
+
+func (api *PostAPI) ContextEdit() *PostAPI {
+	api.arguments["context"] = "edit"
+	return api
+}
+
+func (api *PostAPI) ContextEmbed() *PostAPI {
+	api.arguments["context"] = "embed"
+	return api
+}
+
+func (api *PostAPI) Password(password string) *PostAPI {
+	api.arguments["password"] = password
+	return api
+}
+
+func (api *PostAPI) Get() (post *Post, err error) {
+	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.postId)
+
+	_, err = api.client.httpClient.R().
+		SetHeader("Accept", "application/json").
+		SetResult(&post).
+		SetQueryParams(api.arguments).
+		Get(endpoint)
+
+	if err != nil {
+		return
+	}
+
+	return
+}

@@ -69,3 +69,16 @@ func TestCreatePost(t *testing.T) {
 		"New post count should greater than or equal to the previous count. Expected %d, got %d",
 		postCountBefore, postCountAfter)
 }
+
+func TestRetrievePost(t *testing.T) {
+	client := gowprest.NewClient(blogUrl)
+	defer client.Close()
+
+	listAPI := client.Posts().List()
+	posts, err := listAPI.Get()
+	assert.Equal(t, err, nil, "Something error %v", err)
+
+	singlePost, err := client.Posts().Retrieve(posts[0].ID).Get()
+	assert.Equal(t, err, nil, "Something error %v", err)
+	assert.Equal(t, posts[0].Title.Rendered, singlePost.Title.Rendered)
+}
