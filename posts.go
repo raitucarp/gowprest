@@ -1,6 +1,7 @@
 package gowprest
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -40,6 +41,7 @@ type Post struct {
 	PermalinkTemplate string           `json:"permalink_template,omitempty"`
 	GeneratedSlug     string           `json:"generated_slug,omitempty"`
 	Title             *Object          `json:"title,omitempty"`
+	Content           *Object          `json:"content,omitempty"`
 	Author            int              `json:"author,omitempty"`
 	Excerpt           *Object          `json:"excerpt,omitempty"`
 	FeaturedMedia     int              `json:"featured_media,omitempty"`
@@ -51,6 +53,27 @@ type Post struct {
 	Template          string           `json:"template,omitempty"`
 	Categories        []int            `json:"categories,omitempty"`
 	Tags              []int            `json:"tags,omitempty"`
+}
+
+type NewPost struct {
+	Date          *Date            `json:"date,omitempty"`
+	DateGMT       *Date            `json:"date_gmt,omitempty"`
+	Slug          string           `json:"slug,omitempty"`
+	Status        PostStatus       `json:"status,omitempty"`
+	Password      string           `json:"password,omitempty"`
+	Title         string           `json:"title,omitempty"`
+	Content       string           `json:"content,omitempty"`
+	Author        int              `json:"author,omitempty"`
+	Excerpt       string           `json:"excerpt,omitempty"`
+	FeaturedMedia int              `json:"featured_media,omitempty"`
+	CommentStatus OpenClosedStatus `json:"comment_status,omitempty"`
+	PingStatus    OpenClosedStatus `json:"ping_status,omitempty"`
+	Format        Format           `json:"format,omitempty"`
+	Meta          map[string]any   `json:"meta,omitempty"`
+	Sticky        bool             `json:"sticky,omitempty"`
+	Template      string           `json:"template,omitempty"`
+	Categories    []int            `json:"categories,omitempty"`
+	Tags          []int            `json:"tags,omitempty"`
 }
 
 type PostsAPI struct {
@@ -311,7 +334,46 @@ func (api *ListPostsAPI) Get() (posts []Post, err error) {
 		SetQueryParams(api.arguments).
 		Get(api.client.endpoint + api.endpoint)
 
-	defer api.client.httpClient.Close()
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+type CreatePostAPI struct {
+	endpoint string
+	client   *RestClient
+	post     NewPost
+}
+
+func (api *PostsAPI) Create(post NewPost) *CreatePostAPI {
+	return &CreatePostAPI{
+		endpoint: "/wp/v2/posts",
+		client:   api.client,
+		post:     post,
+	}
+}
+
+func (api *CreatePostAPI) Post() (post Post, err error) {
+	resp, err := api.client.httpClient.R().
+		SetHeader("Content-Type", "application/json").
+		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
+		SetResult(&post).
+		SetBody(api.post).
+		// SetError(err).
+		Post(api.client.endpoint + api.endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+
+		if err != nil {
+			return
+		}
+
+		return post, &wpError
+	}
 
 	if err != nil {
 		return
