@@ -53,7 +53,7 @@ func TestCreatePost(t *testing.T) {
 
 	assert.Equal(t, err, nil, "Something error %v", err)
 
-	_, err = postAPI.Create(gowprest.NewPost{
+	_, err = postAPI.Create(gowprest.PostData{
 		Title:   faker.Sentence(),
 		Content: faker.Paragraph(),
 		Excerpt: faker.Sentence(),
@@ -81,4 +81,43 @@ func TestRetrievePost(t *testing.T) {
 	singlePost, err := client.Posts().Retrieve(posts[0].ID).Do()
 	assert.Equal(t, err, nil, "Something error %v", err)
 	assert.Equal(t, posts[0].Title.Rendered, singlePost.Title.Rendered)
+}
+
+func TestUpdatePost(t *testing.T) {
+	client := gowprest.NewClient(blogUrl).
+		WithBasicAuth(
+			os.Getenv("BLOG_USERNAME"),
+			os.Getenv("BLOG_APP_PASSWORD"),
+		)
+	defer client.Close()
+
+	listAPI := client.Posts().List()
+	posts, err := listAPI.Do()
+	assert.Equal(t, err, nil, "Something error %v", err)
+
+	selectedPost := posts[0]
+	postID := selectedPost.ID
+	updateAPI := client.Posts().Update(gowprest.PostData{
+		ID:      postID,
+		Title:   faker.Sentence(),
+		Content: faker.Paragraph(),
+		Excerpt: faker.Sentence(),
+		Status:  gowprest.StatusPublished,
+	})
+
+	updatedPost, err := updateAPI.Do()
+	assert.Equal(t, err, nil, "Something error %v", err)
+	assert.Equal(t, postID, updatedPost.ID)
+	assert.NotEqual(t, selectedPost.Title.Rendered, updatedPost.Title.Rendered)
+	assert.NotEqual(t, selectedPost.Content.Rendered, updatedPost.Content.Rendered)
+
+	updateAPI = client.Posts().Update(gowprest.PostData{
+		ID:     postID,
+		Status: gowprest.StatusDraft,
+	})
+
+	updatedPost, err = updateAPI.Do()
+	assert.Equal(t, err, nil, "Something error %v", err)
+	assert.Equal(t, postID, updatedPost.ID)
+	assert.NotEqual(t, selectedPost.Status, updatedPost.Status)
 }

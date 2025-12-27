@@ -55,7 +55,8 @@ type Post struct {
 	Tags              []int            `json:"tags,omitempty"`
 }
 
-type NewPost struct {
+type PostData struct {
+	ID            int              `json:"id,omitempty"`
 	Date          *Date            `json:"date,omitempty"`
 	DateGMT       *Date            `json:"date_gmt,omitempty"`
 	Slug          string           `json:"slug,omitempty"`
@@ -344,10 +345,10 @@ func (api *ListPostsAPI) Do() (posts []Post, err error) {
 type CreatePostAPI struct {
 	endpoint string
 	client   *RestClient
-	post     NewPost
+	post     PostData
 }
 
-func (api *PostsAPI) Create(post NewPost) *CreatePostAPI {
+func (api *PostsAPI) Create(post PostData) *CreatePostAPI {
 	return &CreatePostAPI{
 		endpoint: "/wp/v2/posts",
 		client:   api.client,
@@ -385,15 +386,13 @@ func (api *CreatePostAPI) Do() (post Post, err error) {
 type PostAPI struct {
 	endpoint  string
 	client    *RestClient
-	postId    int
 	arguments map[string]string
 }
 
 func (api *PostsAPI) Retrieve(postId int) *PostAPI {
 	return &PostAPI{
-		endpoint:  "/wp/v2/posts",
+		endpoint:  "/wp/v2/posts/" + strconv.Itoa(postId),
 		client:    api.client,
-		postId:    postId,
 		arguments: make(map[string]string),
 	}
 }
@@ -419,13 +418,54 @@ func (api *PostAPI) Password(password string) *PostAPI {
 }
 
 func (api *PostAPI) Do() (post *Post, err error) {
-	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.postId)
+	endpoint := api.client.endpoint + api.endpoint
 
 	_, err = api.client.httpClient.R().
 		SetHeader("Accept", "application/json").
 		SetResult(&post).
 		SetQueryParams(api.arguments).
 		Get(endpoint)
+
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+type UpdatePostAPI struct {
+	endpoint string
+	client   *RestClient
+	post     PostData
+}
+
+func (api *PostsAPI) Update(post PostData) *UpdatePostAPI {
+	return &UpdatePostAPI{
+		endpoint: "/wp/v2/posts/" + strconv.Itoa(post.ID),
+		client:   api.client,
+		post:     post,
+	}
+}
+
+func (api *UpdatePostAPI) Do() (post Post, err error) {
+	resp, err := api.client.httpClient.R().
+		SetHeader("Content-Type", "application/json").
+		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
+		SetResult(&post).
+		SetBody(api.post).
+		// SetError(err).
+		Post(api.client.endpoint + api.endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+
+		if err != nil {
+			return
+		}
+
+		return post, &wpError
+	}
 
 	if err != nil {
 		return
