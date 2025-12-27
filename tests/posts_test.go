@@ -19,7 +19,7 @@ func TestListPosts(t *testing.T) {
 	t.Run("not found search", func(t *testing.T) {
 		listPost := client.Posts().List()
 		listPost = listPost.Search("test")
-		posts, err := listPost.Get()
+		posts, err := listPost.Do()
 
 		assert.Equal(t, err, nil, "Something error %v", err)
 		assert.Equal(t, len(posts), 0, "Post should not return anything")
@@ -27,7 +27,7 @@ func TestListPosts(t *testing.T) {
 
 	t.Run("default post list", func(t *testing.T) {
 		listPost := client.Posts().List()
-		posts, err := listPost.Get()
+		posts, err := listPost.Do()
 
 		assert.Equal(t, err, nil, "Something error %v", err)
 		assert.Greater(t, len(posts), 0, "Post should return at least one post")
@@ -47,7 +47,7 @@ func TestCreatePost(t *testing.T) {
 	postAPI := client.Posts()
 
 	listAPI := postAPI.List()
-	posts, err := listAPI.Get()
+	posts, err := listAPI.Do()
 
 	postCountBefore := len(posts)
 
@@ -58,10 +58,10 @@ func TestCreatePost(t *testing.T) {
 		Content: faker.Paragraph(),
 		Excerpt: faker.Sentence(),
 		Status:  gowprest.StatusPublished,
-	}).Post()
+	}).Do()
 
 	assert.Equal(t, err, nil, err)
-	posts, err = listAPI.Get()
+	posts, err = listAPI.Do()
 
 	postCountAfter := len(posts)
 
@@ -75,10 +75,10 @@ func TestRetrievePost(t *testing.T) {
 	defer client.Close()
 
 	listAPI := client.Posts().List()
-	posts, err := listAPI.Get()
+	posts, err := listAPI.Do()
 	assert.Equal(t, err, nil, "Something error %v", err)
 
-	singlePost, err := client.Posts().Retrieve(posts[0].ID).Get()
+	singlePost, err := client.Posts().Retrieve(posts[0].ID).Do()
 	assert.Equal(t, err, nil, "Something error %v", err)
 	assert.Equal(t, posts[0].Title.Rendered, singlePost.Title.Rendered)
 }

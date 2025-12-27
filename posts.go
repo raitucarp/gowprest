@@ -327,7 +327,7 @@ func (api *ListPostsAPI) Sticky(sticky bool) *ListPostsAPI {
 	return api
 }
 
-func (api *ListPostsAPI) Get() (posts []Post, err error) {
+func (api *ListPostsAPI) Do() (posts []Post, err error) {
 	_, err = api.client.httpClient.R().
 		SetHeader("Accept", "application/json").
 		SetResult(&posts).
@@ -355,7 +355,7 @@ func (api *PostsAPI) Create(post NewPost) *CreatePostAPI {
 	}
 }
 
-func (api *CreatePostAPI) Post() (post Post, err error) {
+func (api *CreatePostAPI) Do() (post Post, err error) {
 	resp, err := api.client.httpClient.R().
 		SetHeader("Content-Type", "application/json").
 		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
@@ -418,7 +418,7 @@ func (api *PostAPI) Password(password string) *PostAPI {
 	return api
 }
 
-func (api *PostAPI) Get() (post *Post, err error) {
+func (api *PostAPI) Do() (post *Post, err error) {
 	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.postId)
 
 	_, err = api.client.httpClient.R().
