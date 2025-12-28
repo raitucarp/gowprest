@@ -420,11 +420,32 @@ func (api *PostAPI) Password(password string) *PostAPI {
 func (api *PostAPI) Do() (post *Post, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
-	_, err = api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Accept", "application/json").
 		SetResult(&post).
 		SetQueryParams(api.arguments).
 		Get(endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+
+		if err != nil {
+			return
+		}
+
+		return post, &wpError
+	}
+
+	// TODO: need fixing of message = invalid suit value: trash
+	if err != nil && err.Error() == "invalid suit value: trash" {
+		err = nil
+	}
 
 	if err != nil {
 		return
@@ -467,8 +488,62 @@ func (api *UpdatePostAPI) Do() (post Post, err error) {
 		return post, &wpError
 	}
 
+	// TODO: need fixing of message = invalid suit value: trash
+	if err != nil && err.Error() == "invalid suit value: trash" {
+		err = nil
+	}
+
 	if err != nil {
 		return
+	}
+
+	return
+}
+
+type DeletePostAPI struct {
+	endpoint string
+	client   *RestClient
+	postId   int
+	force    bool
+}
+
+func (api *PostsAPI) Delete(postId int) *DeletePostAPI {
+	return &DeletePostAPI{
+		endpoint: "/wp/v2/posts",
+		client:   api.client,
+		postId:   postId,
+	}
+}
+
+func (api *DeletePostAPI) Force() *DeletePostAPI {
+	api.force = true
+	return api
+}
+
+func (api *DeletePostAPI) Do() (post Post, err error) {
+	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.postId)
+	resp, err :=
+		api.client.httpClient.R().
+			SetHeader("Content-Type", "application/json").
+			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
+			SetResult(&post).
+			SetPathParam("force", strconv.FormatBool(api.force)).
+			Delete(endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+
+		if err != nil {
+			return
+		}
+
+		return post, &wpError
+	}
+
+	// TODO: need fixing of message = invalid suit value: trash
+	if err != nil && err.Error() == "invalid suit value: trash" {
+		err = nil
 	}
 
 	return
