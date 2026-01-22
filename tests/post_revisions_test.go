@@ -3,6 +3,7 @@ package tests
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/go-faker/faker/v4"
 	_ "github.com/joho/godotenv/autoload"
@@ -53,19 +54,20 @@ func TestPostRevisions(t *testing.T) {
 	// WordPress might take a moment or need some specific state to create a revision.
 	// We'll retry a few times if needed.
 	var revisions []gowprest.Revision
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 10; i++ {
 		revisions, err = revisionsAPI.List().Do()
 		require.NoError(t, err)
 		if len(revisions) >= 1 {
 			break
 		}
-		t.Logf("No revisions found yet, retrying... (%d/5)", i+1)
+		t.Logf("No revisions found yet, retrying... (%d/10)", i+1)
 
-		// Trigger another update just in case
+		// Trigger another update just in case and sleep
 		_, _ = postAPI.Update(gowprest.PostData{
 			ID:      post.ID,
 			Content: faker.Paragraph(),
 		}).Do()
+		time.Sleep(2 * time.Second)
 	}
 
 	assert.GreaterOrEqual(t, len(revisions), 1, "Should have at least one revision")
