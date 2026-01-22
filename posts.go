@@ -85,6 +85,13 @@ func (c *RestClient) Posts() *Posts {
 	return &Posts{client: c}
 }
 
+func (api *Posts) Revisions(parentID int) *PostRevisions {
+	return &PostRevisions{
+		client:   api.client,
+		parentID: parentID,
+	}
+}
+
 type ListPosts struct {
 	endpoint  string
 	client    *RestClient
