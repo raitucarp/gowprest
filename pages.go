@@ -62,6 +62,13 @@ func (c *RestClient) Pages() *Pages {
 	return &Pages{client: c}
 }
 
+func (api *Pages) Revisions(parentID int) *PageRevisions {
+	return &PageRevisions{
+		client:   api.client,
+		parentID: parentID,
+	}
+}
+
 type ListPages struct {
 	endpoint  string
 	client    *RestClient
