@@ -39,17 +39,28 @@ func (api *PostRevisions) List() *ListPostRevisions {
 // Retrieve returns a RetrievePostRevision struct to get a specific revision.
 func (api *PostRevisions) Retrieve(revisionID int) *RetrievePostRevision {
 	return &RetrievePostRevision{
-		endpoint:  "/wp/v2/posts/" + strconv.Itoa(api.parentID) + "/revisions/" + strconv.Itoa(revisionID),
-		client:    api.client,
-		arguments: make(map[string]string),
+		endpoint:   "/wp/v2/posts/" + strconv.Itoa(api.parentID) + "/revisions",
+		client:     api.client,
+		revisionID: revisionID,
+		arguments:  make(map[string]string),
 	}
 }
 
 // Delete returns a DeletePostRevision struct to delete a specific revision.
 func (api *PostRevisions) Delete(revisionID int) *DeletePostRevision {
 	return &DeletePostRevision{
-		endpoint: "/wp/v2/posts/" + strconv.Itoa(api.parentID) + "/revisions/" + strconv.Itoa(revisionID),
+		endpoint:   "/wp/v2/posts/" + strconv.Itoa(api.parentID) + "/revisions",
+		client:     api.client,
+		revisionID: revisionID,
+	}
+}
+
+// Create returns a CreatePostRevision struct to create a new revision (autosave).
+func (api *PostRevisions) Create(revision PostData) *CreatePostRevision {
+	return &CreatePostRevision{
+		endpoint: "/wp/v2/posts/" + strconv.Itoa(api.parentID) + "/autosaves",
 		client:   api.client,
+		revision: revision,
 	}
 }
 
@@ -111,7 +122,12 @@ func (api *ListPostRevisions) OrderBy(orderBy string) *ListPostRevisions {
 }
 
 func (api *ListPostRevisions) Do() (revisions []Revision, err error) {
-	_, err = api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	_, err = restyClient.
 		SetHeader("Accept", "application/json").
 		SetResult(&revisions).
 		SetQueryParams(api.arguments).
@@ -122,9 +138,10 @@ func (api *ListPostRevisions) Do() (revisions []Revision, err error) {
 
 // RetrievePostRevision handles retrieving a specific revision.
 type RetrievePostRevision struct {
-	endpoint  string
-	client    *RestClient
-	arguments map[string]string
+	endpoint   string
+	client     *RestClient
+	revisionID int
+	arguments  map[string]string
 }
 
 func (api *RetrievePostRevision) ContextView() *RetrievePostRevision {
@@ -143,10 +160,10 @@ func (api *RetrievePostRevision) ContextEmbed() *RetrievePostRevision {
 }
 
 func (api *RetrievePostRevision) Do() (revision *Revision, err error) {
-	endpoint := api.client.endpoint + api.endpoint
+	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.revisionID)
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -167,14 +184,20 @@ func (api *RetrievePostRevision) Do() (revision *Revision, err error) {
 		return revision, &wpError
 	}
 
+	// TODO: need fixing of message = invalid suit value: trash
+	if err != nil && err.Error() == "invalid suit value: trash" {
+		err = nil
+	}
+
 	return
 }
 
 // DeletePostRevision handles deleting a specific revision.
 type DeletePostRevision struct {
-	endpoint string
-	client   *RestClient
-	force    bool
+	endpoint   string
+	client     *RestClient
+	revisionID int
+	force      bool
 }
 
 func (api *DeletePostRevision) Force() *DeletePostRevision {
@@ -183,12 +206,53 @@ func (api *DeletePostRevision) Force() *DeletePostRevision {
 }
 
 func (api *DeletePostRevision) Do() (revision Revision, err error) {
+	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.revisionID)
+	restyClient := api.client.httpClient.R()
+
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient = restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
+		SetHeader("X-HTTP-Method-Override", "DELETE").
+		SetResult(&revision).
+		// SetQueryParam("force", strconv.FormatBool(api.force)).
+		SetBody(map[string]bool{"force": api.force}).
+		Post(endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+
+		if err != nil {
+			return
+		}
+
+		return revision, &wpError
+	}
+
+	// TODO: need fixing of message = invalid suit value: trash
+	if err != nil && err.Error() == "invalid suit value: trash" {
+		err = nil
+	}
+
+	return
+}
+
+// CreatePostRevision handles creating a new revision (autosave).
+type CreatePostRevision struct {
+	endpoint string
+	client   *RestClient
+	revision PostData
+}
+
+func (api *CreatePostRevision) Do() (revision Revision, err error) {
 	resp, err := api.client.httpClient.R().
 		SetHeader("Content-Type", "application/json").
 		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&revision).
-		SetQueryParam("force", strconv.FormatBool(api.force)).
-		Delete(api.client.endpoint + api.endpoint)
+		SetBody(api.revision).
+		Post(api.client.endpoint + api.endpoint)
 
 	if resp.IsError() {
 		var wpError WPRestError
