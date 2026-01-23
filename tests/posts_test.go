@@ -160,7 +160,7 @@ func TestDeletePost(t *testing.T) {
 	require.Equal(t, trashedPost.ID, singlePost.ID)
 
 	_, err = client.Posts().Delete(postID).Force().Do()
-	require.NotEqual(t, nil, err)
+	require.Equal(t, nil, err)
 
 	_, err = client.Posts().Retrieve(singlePost.ID).Do()
 	assert.NotEqual(t, nil, err)
