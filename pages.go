@@ -483,7 +483,7 @@ func (api *DeletePage) Do() (page Page, err error) {
 			SetHeader("Content-Type", "application/json").
 			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 			SetResult(&page).
-			SetPathParam("force", strconv.FormatBool(api.force)).
+			SetQueryParam("force", strconv.FormatBool(api.force)).
 			Delete(endpoint)
 
 	if resp.IsError() {
