@@ -534,7 +534,7 @@ func (api *DeletePost) Do() (post Post, err error) {
 			SetHeader("Content-Type", "application/json").
 			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 			SetResult(&post).
-			SetPathParam("force", strconv.FormatBool(api.force)).
+			SetQueryParam("force", strconv.FormatBool(api.force)).
 			Delete(endpoint)
 
 	if resp.IsError() {
