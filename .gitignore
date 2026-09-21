@@ -27,6 +27,10 @@ go.work.sum
 # env file
 .env
 
+# Docker local environment
+docker-compose.yml
+docker-compose.*.yml
+
 # Editor/IDE
 # .idea/
 # .vscode/
