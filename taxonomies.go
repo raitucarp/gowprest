@@ -2,6 +2,16 @@ package gowprest
 
 import (
 	"encoding/json"
+	"strings"
+)
+
+// Standard WordPress core taxonomy constants.
+const (
+	TaxonomyCategory     = "category"
+	TaxonomyPostTag      = "post_tag"
+	TaxonomyNavMenu      = "nav_menu"
+	TaxonomyLinkCategory = "link_category"
+	TaxonomyPostFormat   = "post_format"
 )
 
 type TaxonomyCapabilities struct {
@@ -63,6 +73,8 @@ type Taxonomy struct {
 	RestBase      string               `json:"rest_base,omitempty"`
 	RestNamespace string               `json:"rest_namespace,omitempty"`
 	Visibility    TaxonomyVisibility   `json:"visibility,omitempty"`
+	Links         map[string]any       `json:"_links,omitempty"`
+	Embedded      map[string]any       `json:"_embedded,omitempty"`
 }
 
 type Taxonomies struct {
@@ -87,6 +99,11 @@ func (api *Taxonomies) List() *ListTaxonomies {
 	}
 }
 
+func (api *ListTaxonomies) Context(ctx string) *ListTaxonomies {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *ListTaxonomies) ContextView() *ListTaxonomies {
 	api.arguments["context"] = "view"
 	return api
@@ -107,17 +124,28 @@ func (api *ListTaxonomies) Type(postType string) *ListTaxonomies {
 	return api
 }
 
+func (api *ListTaxonomies) Embed() *ListTaxonomies {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *ListTaxonomies) Fields(fields ...string) *ListTaxonomies {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *ListTaxonomies) Do() (taxonomies map[string]Taxonomy, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
+	var raw json.RawMessage
 	resp, err := restyClient.
 		SetHeader("Accept", "application/json").
-		SetResult(&taxonomies).
+		SetResult(&raw).
 		SetQueryParams(api.arguments).
 		Get(endpoint)
 
@@ -128,14 +156,18 @@ func (api *ListTaxonomies) Do() (taxonomies map[string]Taxonomy, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return taxonomies, &wpError
 	}
 
+	body := strings.TrimSpace(string(raw))
+	if strings.HasPrefix(body, "[") {
+		return make(map[string]Taxonomy), nil
+	}
+
+	err = json.Unmarshal(raw, &taxonomies)
 	return
 }
 
@@ -153,6 +185,11 @@ func (api *Taxonomies) Retrieve(taxonomy string) *RetrieveTaxonomy {
 	}
 }
 
+func (api *RetrieveTaxonomy) Context(ctx string) *RetrieveTaxonomy {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *RetrieveTaxonomy) ContextView() *RetrieveTaxonomy {
 	api.arguments["context"] = "view"
 	return api
@@ -168,11 +205,21 @@ func (api *RetrieveTaxonomy) ContextEmbed() *RetrieveTaxonomy {
 	return api
 }
 
+func (api *RetrieveTaxonomy) Embed() *RetrieveTaxonomy {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *RetrieveTaxonomy) Fields(fields ...string) *RetrieveTaxonomy {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *RetrieveTaxonomy) Do() (taxonomy *Taxonomy, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -189,11 +236,9 @@ func (api *RetrieveTaxonomy) Do() (taxonomy *Taxonomy, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return taxonomy, &wpError
 	}
 

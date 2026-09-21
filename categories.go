@@ -7,15 +7,17 @@ import (
 )
 
 type Category struct {
-	ID          int    `json:"id,omitempty"`
-	Count       int    `json:"count,omitempty"`
-	Description string `json:"description,omitempty"`
-	Link        string `json:"link,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Slug        string `json:"slug,omitempty"`
-	Taxonomy    string `json:"taxonomy,omitempty"`
-	Parent      int    `json:"parent,omitempty"`
-	Meta        any    `json:"meta,omitempty"`
+	ID          int            `json:"id,omitempty"`
+	Count       int            `json:"count,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Link        string         `json:"link,omitempty"`
+	Name        string         `json:"name,omitempty"`
+	Slug        string         `json:"slug,omitempty"`
+	Taxonomy    string         `json:"taxonomy,omitempty"`
+	Parent      int            `json:"parent,omitempty"`
+	Meta        any            `json:"meta,omitempty"`
+	Links       map[string]any `json:"_links,omitempty"`
+	Embedded    map[string]any `json:"_embedded,omitempty"`
 }
 
 type CategoryData struct {
@@ -49,6 +51,11 @@ func (api *Categories) List() *ListCategories {
 	}
 }
 
+func (api *ListCategories) Context(ctx string) *ListCategories {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *ListCategories) ContextView() *ListCategories {
 	api.arguments["context"] = "view"
 	return api
@@ -80,7 +87,7 @@ func (api *ListCategories) Search(query string) *ListCategories {
 }
 
 func (api *ListCategories) Exclude(excludeIDs ...int) *ListCategories {
-	excludes := []string{}
+	excludes := make([]string, 0, len(excludeIDs))
 	for _, excludeId := range excludeIDs {
 		excludes = append(excludes, strconv.Itoa(excludeId))
 	}
@@ -89,11 +96,21 @@ func (api *ListCategories) Exclude(excludeIDs ...int) *ListCategories {
 }
 
 func (api *ListCategories) Include(includeIDs ...int) *ListCategories {
-	includes := []string{}
+	includes := make([]string, 0, len(includeIDs))
 	for _, includeId := range includeIDs {
 		includes = append(includes, strconv.Itoa(includeId))
 	}
 	api.arguments["include"] = strings.Join(includes, ",")
+	return api
+}
+
+func (api *ListCategories) Offset(offset int) *ListCategories {
+	api.arguments["offset"] = strconv.Itoa(offset)
+	return api
+}
+
+func (api *ListCategories) Order(order string) *ListCategories {
+	api.arguments["order"] = order
 	return api
 }
 
@@ -104,6 +121,11 @@ func (api *ListCategories) OrderAsc() *ListCategories {
 
 func (api *ListCategories) OrderDesc() *ListCategories {
 	api.arguments["order"] = "desc"
+	return api
+}
+
+func (api *ListCategories) OrderBy(orderBy string) *ListCategories {
+	api.arguments["orderby"] = orderBy
 	return api
 }
 
@@ -167,15 +189,35 @@ func (api *ListCategories) Slug(slugs ...string) *ListCategories {
 	return api
 }
 
+func (api *ListCategories) Embed() *ListCategories {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *ListCategories) Fields(fields ...string) *ListCategories {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *ListCategories) Do() (categories []Category, err error) {
-	_, err = api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Accept", "application/json").
 		SetResult(&categories).
 		SetQueryParams(api.arguments).
 		Get(api.client.endpoint + api.endpoint)
 
-	if err != nil {
-		return
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+		if err != nil {
+			return
+		}
+		return categories, &wpError
 	}
 
 	return
@@ -187,12 +229,42 @@ type CreateCategory struct {
 	category CategoryData
 }
 
-func (api *Categories) Create(category CategoryData) *CreateCategory {
-	return &CreateCategory{
+// Create returns a CreateCategory builder. Can be called without arguments for fluent chaining,
+// or with CategoryData for backward compatibility.
+func (api *Categories) Create(category ...CategoryData) *CreateCategory {
+	builder := &CreateCategory{
 		endpoint: "/wp/v2/categories",
 		client:   api.client,
-		category: category,
 	}
+	if len(category) > 0 {
+		builder.category = category[0]
+	}
+	return builder
+}
+
+func (api *CreateCategory) Name(name string) *CreateCategory {
+	api.category.Name = name
+	return api
+}
+
+func (api *CreateCategory) Description(description string) *CreateCategory {
+	api.category.Description = description
+	return api
+}
+
+func (api *CreateCategory) Slug(slug string) *CreateCategory {
+	api.category.Slug = slug
+	return api
+}
+
+func (api *CreateCategory) Parent(parentID int) *CreateCategory {
+	api.category.Parent = parentID
+	return api
+}
+
+func (api *CreateCategory) Meta(meta any) *CreateCategory {
+	api.category.Meta = meta
+	return api
 }
 
 func (api *CreateCategory) Do() (category Category, err error) {
@@ -206,16 +278,10 @@ func (api *CreateCategory) Do() (category Category, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return category, &wpError
-	}
-
-	if err != nil {
-		return
 	}
 
 	return
@@ -235,6 +301,11 @@ func (api *Categories) Retrieve(categoryId int) *RetrieveCategory {
 	}
 }
 
+func (api *RetrieveCategory) Context(ctx string) *RetrieveCategory {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *RetrieveCategory) ContextView() *RetrieveCategory {
 	api.arguments["context"] = "view"
 	return api
@@ -250,11 +321,21 @@ func (api *RetrieveCategory) ContextEmbed() *RetrieveCategory {
 	return api
 }
 
+func (api *RetrieveCategory) Embed() *RetrieveCategory {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *RetrieveCategory) Fields(fields ...string) *RetrieveCategory {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *RetrieveCategory) Do() (category *Category, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -267,16 +348,10 @@ func (api *RetrieveCategory) Do() (category *Category, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return category, &wpError
-	}
-
-	if err != nil {
-		return
 	}
 
 	return
@@ -288,12 +363,50 @@ type UpdateCategory struct {
 	category CategoryData
 }
 
-func (api *Categories) Update(category CategoryData) *UpdateCategory {
-	return &UpdateCategory{
-		endpoint: "/wp/v2/categories/" + strconv.Itoa(category.ID),
+// Update returns an UpdateCategory builder. Can be called without arguments or with CategoryData.
+func (api *Categories) Update(category ...CategoryData) *UpdateCategory {
+	builder := &UpdateCategory{
+		endpoint: "/wp/v2/categories",
 		client:   api.client,
-		category: category,
 	}
+	if len(category) > 0 {
+		builder.category = category[0]
+		if builder.category.ID != 0 {
+			builder.endpoint = "/wp/v2/categories/" + strconv.Itoa(builder.category.ID)
+		}
+	}
+	return builder
+}
+
+func (api *UpdateCategory) ID(id int) *UpdateCategory {
+	api.category.ID = id
+	api.endpoint = "/wp/v2/categories/" + strconv.Itoa(id)
+	return api
+}
+
+func (api *UpdateCategory) Name(name string) *UpdateCategory {
+	api.category.Name = name
+	return api
+}
+
+func (api *UpdateCategory) Description(description string) *UpdateCategory {
+	api.category.Description = description
+	return api
+}
+
+func (api *UpdateCategory) Slug(slug string) *UpdateCategory {
+	api.category.Slug = slug
+	return api
+}
+
+func (api *UpdateCategory) Parent(parentID int) *UpdateCategory {
+	api.category.Parent = parentID
+	return api
+}
+
+func (api *UpdateCategory) Meta(meta any) *UpdateCategory {
+	api.category.Meta = meta
+	return api
 }
 
 func (api *UpdateCategory) Do() (category Category, err error) {
@@ -307,19 +420,19 @@ func (api *UpdateCategory) Do() (category Category, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return category, &wpError
 	}
 
-	if err != nil {
-		return
-	}
-
 	return
+}
+
+type deleteCategoryEnvelope struct {
+	Category
+	Deleted  bool      `json:"deleted"`
+	Previous *Category `json:"previous"`
 }
 
 type DeleteCategory struct {
@@ -334,6 +447,7 @@ func (api *Categories) Delete(categoryId int) *DeleteCategory {
 		endpoint:   "/wp/v2/categories",
 		client:     api.client,
 		categoryId: categoryId,
+		force:      true, // Terms do not support trashing in WP REST API
 	}
 }
 
@@ -344,36 +458,31 @@ func (api *DeleteCategory) Force() *DeleteCategory {
 
 func (api *DeleteCategory) Do() (category Category, err error) {
 	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.categoryId)
+	var env deleteCategoryEnvelope
 	resp, err :=
 		api.client.httpClient.R().
 			SetHeader("Content-Type", "application/json").
 			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
+			SetResult(&env).
 			SetQueryParam("force", strconv.FormatBool(api.force)).
 			Delete(endpoint)
 
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return category, &wpError
 	}
 
-	if api.force {
-		var nested struct {
-			Deleted  bool     `json:"deleted"`
-			Previous Category `json:"previous"`
-		}
-		err = json.Unmarshal(resp.Bytes(), &nested)
-		if err != nil {
-			return
-		}
-		return nested.Previous, nil
+	if err != nil {
+		return
 	}
 
-	err = json.Unmarshal(resp.Bytes(), &category)
-	return
+	if env.Previous != nil && env.Previous.ID != 0 {
+		return *env.Previous, nil
+	}
+
+	return env.Category, nil
 }
