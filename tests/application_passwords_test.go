@@ -183,4 +183,52 @@ func TestApplicationPasswords(t *testing.T) {
 			t.Fatalf("expected WPRestError, got: %v", err)
 		}
 	})
+
+	t.Run("DeleteAll_OnDedicatedTestUser", func(t *testing.T) {
+		tempUserName := "testappuser"
+		tempEmail := "testappuser@example.com"
+
+		// Pre-cleanup if exists
+		existingUsers, _ := client.Users().List().Search(tempUserName).Do()
+		for _, u := range existingUsers {
+			if u.Username == tempUserName {
+				_, _ = client.Users().Delete(u.ID).Force().Reassign(1).Do()
+			}
+		}
+
+		tempUser, err := client.Users().Create().
+			Username(tempUserName).
+			Email(tempEmail).
+			Password("StrongPassw0rd!123").
+			Roles("editor").
+			Do()
+		require.NoError(t, err)
+		require.NotNil(t, tempUser)
+		defer func() {
+			_, _ = client.Users().Delete(tempUser.ID).Force().Reassign(1).Do()
+		}()
+
+		userAppPassAPI := client.ApplicationPasswords(tempUser.ID)
+
+		// Create 2 application passwords
+		_, err = userAppPassAPI.Create("App Pass 1").Do()
+		require.NoError(t, err)
+
+		_, err = userAppPassAPI.Create("App Pass 2").Do()
+		require.NoError(t, err)
+
+		listBefore, err := userAppPassAPI.List().Do()
+		require.NoError(t, err)
+		assert.Len(t, listBefore, 2)
+
+		// Call DeleteAll
+		deleted, err := userAppPassAPI.DeleteAll().Do()
+		require.NoError(t, err)
+		assert.True(t, deleted)
+
+		// Verify list is now empty
+		listAfter, err := userAppPassAPI.List().Do()
+		require.NoError(t, err)
+		assert.Empty(t, listAfter)
+	})
 }

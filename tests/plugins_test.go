@@ -180,4 +180,50 @@ func TestPlugins(t *testing.T) {
 		var wpErr *gowprest.WPRestError
 		assert.True(t, errors.As(err, &wpErr))
 	})
+
+	t.Run("PluginLifecycle_InstallUpdateDelete", func(t *testing.T) {
+		pluginSlug := "classic-widgets"
+
+		// Pre-cleanup in case it was left over from a previous run
+		_, _ = client.Plugins().Delete(pluginSlug + "/classic-widgets").Do()
+		_, _ = client.Plugins().Delete(pluginSlug).Do()
+
+		// 1. Install (Create) plugin from WordPress.org
+		installed, err := client.Plugins().Create().
+			Slug(pluginSlug).
+			StatusInactive().
+			Do()
+		if err != nil {
+			t.Logf("Plugin install failed: %v", err)
+		}
+		require.NoError(t, err)
+		require.NotNil(t, installed)
+		t.Logf("Installed plugin: %s, status: %s", installed.Plugin, installed.Status)
+		assert.Contains(t, installed.Plugin, pluginSlug)
+
+		pluginFile := installed.Plugin
+
+		// 2. Activate (Update)
+		activated, err := client.Plugins().Update(pluginFile).Activate().Do()
+		require.NoError(t, err)
+		assert.True(t, activated.IsActive())
+
+		// 3. Deactivate (Update)
+		deactivated, err := client.Plugins().Update(pluginFile).Deactivate().Do()
+		require.NoError(t, err)
+		assert.True(t, deactivated.IsInactive())
+
+		// 4. Delete
+		deleted, err := client.Plugins().Delete(pluginFile).Do()
+		require.NoError(t, err)
+		require.NotNil(t, deleted)
+
+		// 5. Verify 404 after deletion
+		_, err = client.Plugins().Retrieve(pluginFile).Do()
+		require.Error(t, err)
+		var notFoundErr *gowprest.WPRestError
+		require.True(t, errors.As(err, &notFoundErr))
+		assert.Equal(t, 404, notFoundErr.Data.Status)
+	})
 }
+
