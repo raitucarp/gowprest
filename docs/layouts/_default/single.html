@@ -1,0 +1,10 @@
+{{ define "main" }}
+<h1>{{ .Title }}</h1>
+{{ if .Description }}
+  <p style="font-size: 1.15rem; color: var(--text-secondary); margin-bottom: 2rem;">{{ .Description }}</p>
+{{ end }}
+
+<div class="content-body">
+  {{ .Content }}
+</div>
+{{ end }}

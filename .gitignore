@@ -34,3 +34,9 @@ docker-compose.*.yml
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Hugo static build outputs
+docs/public/
+docs/resources/
+public/
+

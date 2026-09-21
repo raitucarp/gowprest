@@ -1,0 +1,48 @@
+baseURL = "https://gowprest.raitucarp.name/"
+defaultContentLanguage = "en"
+title = "gowprest - WordPress REST API Client for Go"
+
+[params]
+  description = "A modern, fluent, and strongly-typed Go client library for the WordPress REST API."
+  githubRepo = "https://github.com/raitucarp/gowprest"
+  author = "raitucarp"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+  [markup.highlight]
+    anchorLineNos = false
+    codeFences = true
+    guessSyntax = true
+    lineNos = false
+    noClasses = true
+    style = "dracula"
+    tabWidth = 4
+
+[menu]
+  [[menu.main]]
+    identifier = "docs"
+    name = "Documentation"
+    url = "/getting-started/quickstart/"
+    weight = 1
+  [[menu.main]]
+    identifier = "guides"
+    name = "Guides"
+    url = "/guides/content-management/"
+    weight = 2
+  [[menu.main]]
+    identifier = "api"
+    name = "API Reference"
+    url = "/api-reference/"
+    weight = 3
+  [[menu.main]]
+    identifier = "godoc"
+    name = "GoDoc"
+    url = "https://pkg.go.dev/github.com/raitucarp/gowprest"
+    weight = 4
+  [[menu.main]]
+    identifier = "github"
+    name = "GitHub"
+    url = "https://github.com/raitucarp/gowprest"
+    weight = 5

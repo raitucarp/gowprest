@@ -1,0 +1,97 @@
+{{ define "main" }}
+<div class="hero">
+  <h1 class="hero-title">
+    WordPress REST API for Go,<br>
+    <span class="hero-gradient">Fast & Type-Safe.</span>
+  </h1>
+  <p class="hero-subtitle">
+    An idiomatic, fluent, and strongly-typed Go client library covering 100% of the WordPress REST API handbook specifications.
+  </p>
+  <div class="hero-buttons">
+    <a href="/getting-started/quickstart/" class="btn btn-primary">Get Started in 5 Min →</a>
+    <a href="/api-reference/" class="btn btn-secondary">Explore API Reference</a>
+  </div>
+</div>
+
+<div class="features-grid">
+  <div class="feature-card">
+    <div class="feature-icon">⚡</div>
+    <div class="feature-title">Complete 40+ Endpoints</div>
+    <div class="feature-desc">Full coverage of posts, pages, taxonomies, media, users, comments, settings, themes, and plugins.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-icon">🧩</div>
+    <div class="feature-title">Gutenberg & FSE Ready</div>
+    <div class="feature-desc">First-class support for blocks, block types, block patterns, templates, template parts, and FSE navigation.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-icon">🎯</div>
+    <div class="feature-title">Fluent Builder Pattern</div>
+    <div class="feature-desc">Type-safe query construction with pagination, context switching, embedding, and sparse field projection (_fields).</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-icon">🔐</div>
+    <div class="feature-title">Modern Auth & Passwords</div>
+    <div class="feature-desc">Full support for WordPress Application Passwords, introspection, and user-level token management.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-icon">🖼️</div>
+    <div class="feature-title">Media & Binary Uploads</div>
+    <div class="feature-desc">Streamlined image, video, and document uploads with automatic MIME detection and metadata assignment.</div>
+  </div>
+
+  <div class="feature-card">
+    <div class="feature-icon">🩺</div>
+    <div class="feature-title">Site Health Diagnostics</div>
+    <div class="feature-desc">Run official WordPress core health checks, background update diagnostics, and directory size calculations.</div>
+  </div>
+</div>
+
+<div style="margin-top: 4rem;">
+  <h2>Quick Example</h2>
+  <p>Here is how quickly you can initialize a client, query published posts, and draft a new article:</p>
+  
+  <pre><code class="language-go">package main
+
+import (
+	"fmt"
+	"log"
+
+	"github.com/raitucarp/gowprest"
+)
+
+func main() {
+	client := gowprest.NewClient("https://your-blog.com").
+		WithBasicAuth("admin", "xxxx xxxx xxxx xxxx")
+	defer client.Close()
+
+	// 1. Fetch recent published posts
+	posts, err := client.Posts().List().
+		Status("publish").
+		PerPage(5).
+		Do()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, p := range posts {
+		fmt.Printf("• %s\n", p.Title.Rendered)
+	}
+
+	// 2. Create a new draft
+	post, err := client.Posts().Create().
+		Title("Built with gowprest").
+		Content("&lt;p&gt;Seamless WordPress publishing in Go!&lt;/p&gt;").
+		StatusDraft().
+		Do()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Draft created ID: %d\n", post.ID)
+}</code></pre>
+</div>
+{{ end }}
