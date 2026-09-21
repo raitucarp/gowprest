@@ -17,6 +17,7 @@ const (
 	CommentStatusTrash   CommentStatus = "trash"
 )
 
+// Comment represents a WordPress comment resource returned by the REST API.
 type Comment struct {
 	ID               int               `json:"id,omitempty"`
 	Post             int               `json:"post,omitempty"`
@@ -39,6 +40,7 @@ type Comment struct {
 	Embedded         map[string]any    `json:"_embedded,omitempty"`
 }
 
+// CommentData holds mutable payload data for creating or updating a comment.
 type CommentData struct {
 	ID              int            `json:"id,omitempty"`
 	Post            int            `json:"post,omitempty"`
@@ -57,26 +59,31 @@ type CommentData struct {
 	Password        string         `json:"password,omitempty"`
 }
 
+// DeletedComment represents the response returned when a comment is deleted.
 type DeletedComment struct {
 	Comment
 	Previous *Comment `json:"previous,omitempty"`
 	Deleted  bool     `json:"deleted"`
 }
 
+// Comments provides operations for managing WordPress comments (/wp/v2/comments).
 type Comments struct {
 	client *RestClient
 }
 
+// Comments returns the Comments service for interacting with post comments.
 func (c *RestClient) Comments() *Comments {
 	return &Comments{client: c}
 }
 
+// ListComments is a fluent builder for querying collections of comments.
 type ListComments struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// List initiates a query builder to list and filter comments.
 func (api *Comments) List() *ListComments {
 	return &ListComments{
 		endpoint:  "/wp/v2/comments",
@@ -336,12 +343,14 @@ func (api *ListComments) Do() (comments []Comment, err error) {
 	return
 }
 
+// CreateComment is a fluent builder for creating a new comment.
 type CreateComment struct {
 	endpoint string
 	client   *RestClient
 	comment  CommentData
 }
 
+// Create returns a builder to create a new WordPress comment.
 func (api *Comments) Create(comment ...CommentData) *CreateComment {
 	req := &CreateComment{
 		endpoint: "/wp/v2/comments",
@@ -393,13 +402,13 @@ func (api *CreateComment) AuthorUserAgent(ua string) *CreateComment {
 	return api
 }
 
-func (api *CreateComment) Date(t time.Time) *CreateComment {
-	api.comment.Date = &Date{Time: t}
+func (api *CreateComment) Date(date time.Time) *CreateComment {
+	api.comment.Date = &Date{Time: date}
 	return api
 }
 
-func (api *CreateComment) DateGMT(t time.Time) *CreateComment {
-	api.comment.DateGMT = &Date{Time: t}
+func (api *CreateComment) DateGMT(date time.Time) *CreateComment {
+	api.comment.DateGMT = &Date{Time: date}
 	return api
 }
 
@@ -471,12 +480,14 @@ func (api *CreateComment) Do() (comment Comment, err error) {
 	return
 }
 
+// RetrieveComment is a fluent builder for fetching a single comment.
 type RetrieveComment struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// Retrieve returns a builder to fetch the comment with the given ID.
 func (api *Comments) Retrieve(commentID int) *RetrieveComment {
 	return &RetrieveComment{
 		endpoint:  "/wp/v2/comments/" + strconv.Itoa(commentID),
@@ -550,12 +561,14 @@ func (api *RetrieveComment) Do() (comment *Comment, err error) {
 	return
 }
 
+// UpdateComment is a fluent builder for modifying an existing comment.
 type UpdateComment struct {
 	endpoint string
 	client   *RestClient
 	comment  CommentData
 }
 
+// Update returns a builder to modify an existing WordPress comment.
 func (api *Comments) Update(comment ...CommentData) *UpdateComment {
 	endpoint := "/wp/v2/comments"
 	var c CommentData
@@ -696,6 +709,7 @@ func (api *UpdateComment) Do() (comment Comment, err error) {
 	return
 }
 
+// DeleteComment is a fluent builder for deleting a WordPress comment.
 type DeleteComment struct {
 	endpoint  string
 	client    *RestClient
@@ -704,6 +718,7 @@ type DeleteComment struct {
 	password  string
 }
 
+// Delete returns a builder to delete the comment with the given ID.
 func (api *Comments) Delete(commentID int) *DeleteComment {
 	return &DeleteComment{
 		endpoint:  "/wp/v2/comments",

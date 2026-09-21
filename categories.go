@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Category represents a WordPress post category taxonomy term.
 type Category struct {
 	ID          int            `json:"id,omitempty"`
 	Count       int            `json:"count,omitempty"`
@@ -20,6 +21,7 @@ type Category struct {
 	Embedded    map[string]any `json:"_embedded,omitempty"`
 }
 
+// CategoryData holds mutable payload data for creating or updating a category.
 type CategoryData struct {
 	ID          int    `json:"id,omitempty"`
 	Description string `json:"description,omitempty"`
@@ -29,20 +31,24 @@ type CategoryData struct {
 	Meta        any    `json:"meta,omitempty"`
 }
 
+// Categories provides operations for managing WordPress post categories (/wp/v2/categories).
 type Categories struct {
 	client *RestClient
 }
 
+// Categories returns the Categories service for managing post categories.
 func (c *RestClient) Categories() *Categories {
 	return &Categories{client: c}
 }
 
+// ListCategories is a fluent builder for querying collections of categories.
 type ListCategories struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// List initiates a query builder to list and filter categories.
 func (api *Categories) List() *ListCategories {
 	return &ListCategories{
 		endpoint:  "/wp/v2/categories",
@@ -223,6 +229,7 @@ func (api *ListCategories) Do() (categories []Category, err error) {
 	return
 }
 
+// CreateCategory is a fluent builder for creating a new post category.
 type CreateCategory struct {
 	endpoint string
 	client   *RestClient
@@ -287,12 +294,14 @@ func (api *CreateCategory) Do() (category Category, err error) {
 	return
 }
 
+// RetrieveCategory is a fluent builder for retrieving a single category.
 type RetrieveCategory struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// Retrieve returns a builder to fetch the category with the given ID.
 func (api *Categories) Retrieve(categoryId int) *RetrieveCategory {
 	return &RetrieveCategory{
 		endpoint:  "/wp/v2/categories/" + strconv.Itoa(categoryId),
@@ -357,6 +366,7 @@ func (api *RetrieveCategory) Do() (category *Category, err error) {
 	return
 }
 
+// UpdateCategory is a fluent builder for modifying an existing post category.
 type UpdateCategory struct {
 	endpoint string
 	client   *RestClient
@@ -435,6 +445,7 @@ type deleteCategoryEnvelope struct {
 	Previous *Category `json:"previous"`
 }
 
+// DeleteCategory is a fluent builder for deleting a post category.
 type DeleteCategory struct {
 	endpoint   string
 	client     *RestClient
@@ -442,6 +453,7 @@ type DeleteCategory struct {
 	force      bool
 }
 
+// Delete returns a builder to delete the category with the given ID.
 func (api *Categories) Delete(categoryId int) *DeleteCategory {
 	return &DeleteCategory{
 		endpoint:   "/wp/v2/categories",

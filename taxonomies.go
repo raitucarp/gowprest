@@ -61,6 +61,7 @@ type TaxonomyVisibility struct {
 	ShowAdminColumn   bool `json:"show_admin_column"`
 }
 
+// Taxonomy represents a WordPress taxonomy definition (e.g. category, post_tag, etc.).
 type Taxonomy struct {
 	Capabilities  TaxonomyCapabilities `json:"capabilities,omitempty"`
 	Description   string               `json:"description,omitempty"`
@@ -77,20 +78,24 @@ type Taxonomy struct {
 	Embedded      map[string]any       `json:"_embedded,omitempty"`
 }
 
+// Taxonomies provides operations for inspecting registered taxonomies (/wp/v2/taxonomies).
 type Taxonomies struct {
 	client *RestClient
 }
 
+// Taxonomies returns the Taxonomies service instance.
 func (c *RestClient) Taxonomies() *Taxonomies {
 	return &Taxonomies{client: c}
 }
 
+// ListTaxonomies is a fluent builder for querying registered taxonomies.
 type ListTaxonomies struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// List initiates a query builder to list all registered taxonomies.
 func (api *Taxonomies) List() *ListTaxonomies {
 	return &ListTaxonomies{
 		endpoint:  "/wp/v2/taxonomies",
@@ -171,12 +176,14 @@ func (api *ListTaxonomies) Do() (taxonomies map[string]Taxonomy, err error) {
 	return
 }
 
+// RetrieveTaxonomy is a fluent builder for retrieving a single taxonomy definition.
 type RetrieveTaxonomy struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// Retrieve returns a builder to fetch details about a specific taxonomy (e.g. "category" or "post_tag").
 func (api *Taxonomies) Retrieve(taxonomy string) *RetrieveTaxonomy {
 	return &RetrieveTaxonomy{
 		endpoint:  "/wp/v2/taxonomies/" + taxonomy,

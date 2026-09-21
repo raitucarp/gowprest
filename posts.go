@@ -50,6 +50,7 @@ func (ct *Date) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Post represents a WordPress post resource returned by the REST API.
 type Post struct {
 	Date              *Date            `json:"date,omitempty"`
 	DateGMT           *Date            `json:"date_gmt,omitempty"`
@@ -81,6 +82,7 @@ type Post struct {
 	Embedded          map[string]any   `json:"_embedded,omitempty"`
 }
 
+// PostData holds mutable payload data for creating or updating a WordPress post.
 type PostData struct {
 	ID            int              `json:"id,omitempty"`
 	Date          *Date            `json:"date,omitempty"`
@@ -103,14 +105,17 @@ type PostData struct {
 	Tags          []int            `json:"tags,omitempty"`
 }
 
+// Posts provides operations for managing WordPress posts (/wp/v2/posts).
 type Posts struct {
 	client *RestClient
 }
 
+// Posts returns the Posts service for querying, creating, retrieving, updating, and deleting posts.
 func (c *RestClient) Posts() *Posts {
 	return &Posts{client: c}
 }
 
+// Revisions returns the PostRevisions service for inspecting revisions of a specific post.
 func (api *Posts) Revisions(parentID int) *PostRevisions {
 	return &PostRevisions{
 		client:   api.client,
@@ -118,12 +123,14 @@ func (api *Posts) Revisions(parentID int) *PostRevisions {
 	}
 }
 
+// ListPosts is a fluent builder for querying a collection of posts.
 type ListPosts struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// List initiates a query builder to list and filter posts.
 func (api *Posts) List() *ListPosts {
 	return &ListPosts{
 		endpoint:  "/wp/v2/posts",
@@ -454,12 +461,14 @@ func (api *ListPosts) Do() (posts []Post, err error) {
 	return
 }
 
+// CreatePost is a fluent builder for creating a new post.
 type CreatePost struct {
 	endpoint string
 	client   *RestClient
 	post     PostData
 }
 
+// Create initializes a fluent builder to create a new WordPress post.
 func (api *Posts) Create(post ...PostData) *CreatePost {
 	var p PostData
 	if len(post) > 0 {
@@ -534,12 +543,14 @@ func (api *CreatePost) Do() (post Post, err error) {
 	return
 }
 
+// RetrievePost is a fluent builder for fetching a single post by ID.
 type RetrievePost struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// Retrieve returns a builder to fetch the post with the given ID.
 func (api *Posts) Retrieve(postId int) *RetrievePost {
 	return &RetrievePost{
 		endpoint:  "/wp/v2/posts/" + strconv.Itoa(postId),
@@ -610,12 +621,14 @@ func (api *RetrievePost) Do() (post *Post, err error) {
 	return
 }
 
+// UpdatePost is a fluent builder for modifying an existing post.
 type UpdatePost struct {
 	endpoint string
 	client   *RestClient
 	post     PostData
 }
 
+// Update returns a builder to modify an existing post.
 func (api *Posts) Update(post ...PostData) *UpdatePost {
 	var p PostData
 	endpoint := "/wp/v2/posts"
@@ -700,6 +713,7 @@ func (api *UpdatePost) Do() (post Post, err error) {
 	return
 }
 
+// DeletePost is a fluent builder for deleting a post.
 type DeletePost struct {
 	endpoint string
 	client   *RestClient
@@ -707,6 +721,7 @@ type DeletePost struct {
 	force    bool
 }
 
+// Delete returns a builder to delete the post with the given ID.
 func (api *Posts) Delete(postId int) *DeletePost {
 	return &DeletePost{
 		endpoint: "/wp/v2/posts",

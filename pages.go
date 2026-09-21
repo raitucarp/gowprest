@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Page represents a WordPress hierarchical page resource returned by the REST API.
 type Page struct {
 	Date              *Date            `json:"date,omitempty"`
 	DateGMT           *Date            `json:"date_gmt,omitempty"`
@@ -36,6 +37,7 @@ type Page struct {
 	Embedded          map[string]any   `json:"_embedded,omitempty"`
 }
 
+// PageData holds mutable payload data for creating or updating a WordPress page.
 type PageData struct {
 	ID            int              `json:"id,omitempty"`
 	Date          *Date            `json:"date,omitempty"`
@@ -56,14 +58,17 @@ type PageData struct {
 	Parent        int              `json:"parent,omitempty"`
 }
 
+// Pages provides operations for managing WordPress hierarchical pages (/wp/v2/pages).
 type Pages struct {
 	client *RestClient
 }
 
+// Pages returns the Pages service for managing hierarchical page resources.
 func (c *RestClient) Pages() *Pages {
 	return &Pages{client: c}
 }
 
+// Revisions returns the PageRevisions service for inspecting revisions of a specific page.
 func (api *Pages) Revisions(parentID int) *PageRevisions {
 	return &PageRevisions{
 		client:   api.client,
@@ -71,12 +76,14 @@ func (api *Pages) Revisions(parentID int) *PageRevisions {
 	}
 }
 
+// ListPages is a fluent builder for querying collections of pages.
 type ListPages struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// List initiates a query builder to list and filter pages.
 func (api *Pages) List() *ListPages {
 	return &ListPages{
 		endpoint:  "/wp/v2/pages",
@@ -359,13 +366,14 @@ func (api *ListPages) Do() (pages []Page, err error) {
 	return
 }
 
+// CreatePage is a fluent builder for creating a new WordPress page.
 type CreatePage struct {
 	endpoint string
 	client   *RestClient
 	page     PageData
 }
 
-// Create returns a CreatePage builder.
+// Create returns a CreatePage builder to create a new hierarchical page.
 func (api *Pages) Create(page ...PageData) *CreatePage {
 	builder := &CreatePage{
 		endpoint: "/wp/v2/pages",
@@ -502,12 +510,14 @@ func (api *CreatePage) Do() (page Page, err error) {
 	return
 }
 
+// RetrievePage is a fluent builder for fetching a single page by ID.
 type RetrievePage struct {
 	endpoint  string
 	client    *RestClient
 	arguments map[string]string
 }
 
+// Retrieve returns a builder to fetch the page with the given ID.
 func (api *Pages) Retrieve(pageID int) *RetrievePage {
 	return &RetrievePage{
 		endpoint:  "/wp/v2/pages/" + strconv.Itoa(pageID),
@@ -577,13 +587,14 @@ func (api *RetrievePage) Do() (page *Page, err error) {
 	return
 }
 
+// UpdatePage is a fluent builder for modifying an existing page.
 type UpdatePage struct {
 	endpoint string
 	client   *RestClient
 	page     PageData
 }
 
-// Update returns an UpdatePage builder.
+// Update returns an UpdatePage builder to modify an existing page.
 func (api *Pages) Update(page ...PageData) *UpdatePage {
 	builder := &UpdatePage{
 		endpoint: "/wp/v2/pages",
@@ -735,6 +746,7 @@ type deletePageEnvelope struct {
 	Previous *Page `json:"previous"`
 }
 
+// DeletePage is a fluent builder for deleting a WordPress page.
 type DeletePage struct {
 	endpoint string
 	client   *RestClient
@@ -742,6 +754,7 @@ type DeletePage struct {
 	force    bool
 }
 
+// Delete returns a builder to delete the page with the given ID.
 func (api *Pages) Delete(pageID int) *DeletePage {
 	return &DeletePage{
 		endpoint: "/wp/v2/pages",
