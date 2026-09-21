@@ -12,6 +12,10 @@ const (
 	StatusPending   PostStatus = "pending"
 	StatusPrivate   PostStatus = "private"
 	StatusPublished PostStatus = "publish"
+	StatusFuture    PostStatus = "future"
+	StatusTrash     PostStatus = "trash"
+	StatusAutoDraft PostStatus = "auto-draft"
+	StatusInherit   PostStatus = "inherit"
 )
 
 func (s PostStatus) MarshalJSON() ([]byte, error) {
@@ -25,10 +29,10 @@ func (s *PostStatus) UnmarshalJSON(data []byte) error {
 	}
 
 	switch postStatus {
-	case string(StatusDraft), string(StatusPending), string(StatusPrivate), string(StatusPublished):
+	case string(StatusDraft), string(StatusPending), string(StatusPrivate), string(StatusPublished), string(StatusFuture), string(StatusTrash), string(StatusAutoDraft), string(StatusInherit):
 		*s = PostStatus(postStatus)
 		return nil
 	default:
-		return fmt.Errorf("invalid suit value: %s", postStatus)
+		return fmt.Errorf("invalid post status: %s", postStatus)
 	}
 }

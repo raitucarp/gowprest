@@ -32,6 +32,8 @@ type Page struct {
 	Meta              map[string]any   `json:"meta,omitempty"`
 	Template          string           `json:"template,omitempty"`
 	Parent            int              `json:"parent,omitempty"`
+	Links             map[string]any   `json:"_links,omitempty"`
+	Embedded          map[string]any   `json:"_embedded,omitempty"`
 }
 
 type PageData struct {
@@ -83,6 +85,11 @@ func (api *Pages) List() *ListPages {
 	}
 }
 
+func (api *ListPages) Context(ctx string) *ListPages {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *ListPages) ContextView() *ListPages {
 	api.arguments["context"] = "view"
 	return api
@@ -123,18 +130,20 @@ func (api *ListPages) ModifiedAfter(modifiedAfter time.Time) *ListPages {
 	return api
 }
 
-func (api *ListPages) Author(authorID int) *ListPages {
-	api.arguments["author"] = strconv.Itoa(authorID)
+func (api *ListPages) Author(authorIDs ...int) *ListPages {
+	authors := make([]string, 0, len(authorIDs))
+	for _, id := range authorIDs {
+		authors = append(authors, strconv.Itoa(id))
+	}
+	api.arguments["author"] = strings.Join(authors, ",")
 	return api
 }
 
 func (api *ListPages) AuthorExclude(authorIDs ...int) *ListPages {
-	authors := []string{}
-
+	authors := make([]string, 0, len(authorIDs))
 	for _, authorId := range authorIDs {
 		authors = append(authors, strconv.Itoa(authorId))
 	}
-
 	api.arguments["author_exclude"] = strings.Join(authors, ",")
 	return api
 }
@@ -150,7 +159,7 @@ func (api *ListPages) ModifiedBefore(modifiedBefore time.Time) *ListPages {
 }
 
 func (api *ListPages) Exclude(excludeIDs ...int) *ListPages {
-	excludes := []string{}
+	excludes := make([]string, 0, len(excludeIDs))
 	for _, excludeId := range excludeIDs {
 		excludes = append(excludes, strconv.Itoa(excludeId))
 	}
@@ -159,7 +168,7 @@ func (api *ListPages) Exclude(excludeIDs ...int) *ListPages {
 }
 
 func (api *ListPages) Include(includeIDs ...int) *ListPages {
-	includes := []string{}
+	includes := make([]string, 0, len(includeIDs))
 	for _, includeId := range includeIDs {
 		includes = append(includes, strconv.Itoa(includeId))
 	}
@@ -172,6 +181,11 @@ func (api *ListPages) Offset(offset int) *ListPages {
 	return api
 }
 
+func (api *ListPages) Order(order string) *ListPages {
+	api.arguments["order"] = order
+	return api
+}
+
 func (api *ListPages) OrderAsc() *ListPages {
 	api.arguments["order"] = "asc"
 	return api
@@ -179,6 +193,11 @@ func (api *ListPages) OrderAsc() *ListPages {
 
 func (api *ListPages) OrderDesc() *ListPages {
 	api.arguments["order"] = "desc"
+	return api
+}
+
+func (api *ListPages) OrderBy(orderBy string) *ListPages {
+	api.arguments["orderby"] = orderBy
 	return api
 }
 
@@ -232,13 +251,28 @@ func (api *ListPages) OrderByTitle() *ListPages {
 	return api
 }
 
+func (api *ListPages) OrderByMenuOrder() *ListPages {
+	api.arguments["orderby"] = "menu_order"
+	return api
+}
+
+func (api *ListPages) MenuOrder(menuOrder int) *ListPages {
+	api.arguments["menu_order"] = strconv.Itoa(menuOrder)
+	return api
+}
+
 func (api *ListPages) SearchColumns(columns ...string) *ListPages {
 	api.arguments["search_columns"] = strings.Join(columns, ",")
 	return api
 }
 
-func (api *ListPages) Slug(slug string) *ListPages {
-	api.arguments["slug"] = slug
+func (api *ListPages) Slug(slugs ...string) *ListPages {
+	api.arguments["slug"] = strings.Join(slugs, ",")
+	return api
+}
+
+func (api *ListPages) Status(statuses ...string) *ListPages {
+	api.arguments["status"] = strings.Join(statuses, ",")
 	return api
 }
 
@@ -283,7 +317,7 @@ func (api *ListPages) Parent(parentID int) *ListPages {
 }
 
 func (api *ListPages) ParentExclude(parentIDs ...int) *ListPages {
-	parents := []string{}
+	parents := make([]string, 0, len(parentIDs))
 	for _, parentId := range parentIDs {
 		parents = append(parents, strconv.Itoa(parentId))
 	}
@@ -291,15 +325,35 @@ func (api *ListPages) ParentExclude(parentIDs ...int) *ListPages {
 	return api
 }
 
+func (api *ListPages) Embed() *ListPages {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *ListPages) Fields(fields ...string) *ListPages {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *ListPages) Do() (pages []Page, err error) {
-	_, err = api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Accept", "application/json").
 		SetResult(&pages).
 		SetQueryParams(api.arguments).
 		Get(api.client.endpoint + api.endpoint)
 
-	if err != nil {
-		return
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+		if err != nil {
+			return
+		}
+		return pages, &wpError
 	}
 
 	return
@@ -311,12 +365,121 @@ type CreatePage struct {
 	page     PageData
 }
 
-func (api *Pages) Create(page PageData) *CreatePage {
-	return &CreatePage{
+// Create returns a CreatePage builder.
+func (api *Pages) Create(page ...PageData) *CreatePage {
+	builder := &CreatePage{
 		endpoint: "/wp/v2/pages",
 		client:   api.client,
-		page:     page,
 	}
+	if len(page) > 0 {
+		builder.page = page[0]
+	}
+	return builder
+}
+
+func (api *CreatePage) Title(title string) *CreatePage {
+	api.page.Title = title
+	return api
+}
+
+func (api *CreatePage) Content(content string) *CreatePage {
+	api.page.Content = content
+	return api
+}
+
+func (api *CreatePage) Excerpt(excerpt string) *CreatePage {
+	api.page.Excerpt = excerpt
+	return api
+}
+
+func (api *CreatePage) Slug(slug string) *CreatePage {
+	api.page.Slug = slug
+	return api
+}
+
+func (api *CreatePage) Status(status PostStatus) *CreatePage {
+	api.page.Status = status
+	return api
+}
+
+func (api *CreatePage) StatusPublish() *CreatePage {
+	api.page.Status = StatusPublished
+	return api
+}
+
+func (api *CreatePage) StatusDraft() *CreatePage {
+	api.page.Status = StatusDraft
+	return api
+}
+
+func (api *CreatePage) StatusPending() *CreatePage {
+	api.page.Status = StatusPending
+	return api
+}
+
+func (api *CreatePage) StatusPrivate() *CreatePage {
+	api.page.Status = StatusPrivate
+	return api
+}
+
+func (api *CreatePage) StatusFuture() *CreatePage {
+	api.page.Status = StatusFuture
+	return api
+}
+
+func (api *CreatePage) Password(password string) *CreatePage {
+	api.page.Password = password
+	return api
+}
+
+func (api *CreatePage) Author(authorID int) *CreatePage {
+	api.page.Author = authorID
+	return api
+}
+
+func (api *CreatePage) FeaturedMedia(mediaID int) *CreatePage {
+	api.page.FeaturedMedia = mediaID
+	return api
+}
+
+func (api *CreatePage) CommentStatus(status OpenClosedStatus) *CreatePage {
+	api.page.CommentStatus = status
+	return api
+}
+
+func (api *CreatePage) PingStatus(status OpenClosedStatus) *CreatePage {
+	api.page.PingStatus = status
+	return api
+}
+
+func (api *CreatePage) MenuOrder(menuOrder int) *CreatePage {
+	api.page.MenuOrder = menuOrder
+	return api
+}
+
+func (api *CreatePage) Parent(parentID int) *CreatePage {
+	api.page.Parent = parentID
+	return api
+}
+
+func (api *CreatePage) Template(template string) *CreatePage {
+	api.page.Template = template
+	return api
+}
+
+func (api *CreatePage) Meta(meta map[string]any) *CreatePage {
+	api.page.Meta = meta
+	return api
+}
+
+func (api *CreatePage) Date(date time.Time) *CreatePage {
+	api.page.Date = &Date{Time: date}
+	return api
+}
+
+func (api *CreatePage) DateGMT(date time.Time) *CreatePage {
+	api.page.DateGMT = &Date{Time: date}
+	return api
 }
 
 func (api *CreatePage) Do() (page Page, err error) {
@@ -330,16 +493,10 @@ func (api *CreatePage) Do() (page Page, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return page, &wpError
-	}
-
-	if err != nil {
-		return
 	}
 
 	return
@@ -357,6 +514,11 @@ func (api *Pages) Retrieve(pageID int) *RetrievePage {
 		client:    api.client,
 		arguments: make(map[string]string),
 	}
+}
+
+func (api *RetrievePage) Context(ctx string) *RetrievePage {
+	api.arguments["context"] = ctx
+	return api
 }
 
 func (api *RetrievePage) ContextView() *RetrievePage {
@@ -379,11 +541,21 @@ func (api *RetrievePage) Password(password string) *RetrievePage {
 	return api
 }
 
+func (api *RetrievePage) Embed() *RetrievePage {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *RetrievePage) Fields(fields ...string) *RetrievePage {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *RetrievePage) Do() (page *Page, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -396,21 +568,10 @@ func (api *RetrievePage) Do() (page *Page, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return page, &wpError
-	}
-
-	// TODO: need fixing of message = invalid suit value: trash
-	if err != nil && err.Error() == "invalid suit value: trash" {
-		err = nil
-	}
-
-	if err != nil {
-		return
 	}
 
 	return
@@ -422,12 +583,130 @@ type UpdatePage struct {
 	page     PageData
 }
 
-func (api *Pages) Update(page PageData) *UpdatePage {
-	return &UpdatePage{
-		endpoint: "/wp/v2/pages/" + strconv.Itoa(page.ID),
+// Update returns an UpdatePage builder.
+func (api *Pages) Update(page ...PageData) *UpdatePage {
+	builder := &UpdatePage{
+		endpoint: "/wp/v2/pages",
 		client:   api.client,
-		page:     page,
 	}
+	if len(page) > 0 {
+		builder.page = page[0]
+		if builder.page.ID != 0 {
+			builder.endpoint = "/wp/v2/pages/" + strconv.Itoa(builder.page.ID)
+		}
+	}
+	return builder
+}
+
+func (api *UpdatePage) ID(id int) *UpdatePage {
+	api.page.ID = id
+	api.endpoint = "/wp/v2/pages/" + strconv.Itoa(id)
+	return api
+}
+
+func (api *UpdatePage) Title(title string) *UpdatePage {
+	api.page.Title = title
+	return api
+}
+
+func (api *UpdatePage) Content(content string) *UpdatePage {
+	api.page.Content = content
+	return api
+}
+
+func (api *UpdatePage) Excerpt(excerpt string) *UpdatePage {
+	api.page.Excerpt = excerpt
+	return api
+}
+
+func (api *UpdatePage) Slug(slug string) *UpdatePage {
+	api.page.Slug = slug
+	return api
+}
+
+func (api *UpdatePage) Status(status PostStatus) *UpdatePage {
+	api.page.Status = status
+	return api
+}
+
+func (api *UpdatePage) StatusPublish() *UpdatePage {
+	api.page.Status = StatusPublished
+	return api
+}
+
+func (api *UpdatePage) StatusDraft() *UpdatePage {
+	api.page.Status = StatusDraft
+	return api
+}
+
+func (api *UpdatePage) StatusPending() *UpdatePage {
+	api.page.Status = StatusPending
+	return api
+}
+
+func (api *UpdatePage) StatusPrivate() *UpdatePage {
+	api.page.Status = StatusPrivate
+	return api
+}
+
+func (api *UpdatePage) StatusFuture() *UpdatePage {
+	api.page.Status = StatusFuture
+	return api
+}
+
+func (api *UpdatePage) Password(password string) *UpdatePage {
+	api.page.Password = password
+	return api
+}
+
+func (api *UpdatePage) Author(authorID int) *UpdatePage {
+	api.page.Author = authorID
+	return api
+}
+
+func (api *UpdatePage) FeaturedMedia(mediaID int) *UpdatePage {
+	api.page.FeaturedMedia = mediaID
+	return api
+}
+
+func (api *UpdatePage) CommentStatus(status OpenClosedStatus) *UpdatePage {
+	api.page.CommentStatus = status
+	return api
+}
+
+func (api *UpdatePage) PingStatus(status OpenClosedStatus) *UpdatePage {
+	api.page.PingStatus = status
+	return api
+}
+
+func (api *UpdatePage) MenuOrder(menuOrder int) *UpdatePage {
+	api.page.MenuOrder = menuOrder
+	return api
+}
+
+func (api *UpdatePage) Parent(parentID int) *UpdatePage {
+	api.page.Parent = parentID
+	return api
+}
+
+func (api *UpdatePage) Template(template string) *UpdatePage {
+	api.page.Template = template
+	return api
+}
+
+func (api *UpdatePage) Meta(meta map[string]any) *UpdatePage {
+	api.page.Meta = meta
+	return api
+}
+
+func (api *UpdatePage) Date(date time.Time) *UpdatePage {
+	api.page.Date = &Date{Time: date}
+	return api
+}
+
+func (api *UpdatePage) DateGMT(date time.Time) *UpdatePage {
+	api.page.DateGMT = &Date{Time: date}
+	return api
 }
 
 func (api *UpdatePage) Do() (page Page, err error) {
@@ -441,19 +720,19 @@ func (api *UpdatePage) Do() (page Page, err error) {
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return page, &wpError
 	}
 
-	if err != nil {
-		return
-	}
-
 	return
+}
+
+type deletePageEnvelope struct {
+	Page
+	Deleted  bool  `json:"deleted"`
+	Previous *Page `json:"previous"`
 }
 
 type DeletePage struct {
@@ -478,29 +757,31 @@ func (api *DeletePage) Force() *DeletePage {
 
 func (api *DeletePage) Do() (page Page, err error) {
 	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.pageID)
+	var env deletePageEnvelope
 	resp, err :=
 		api.client.httpClient.R().
 			SetHeader("Content-Type", "application/json").
 			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
-			SetResult(&page).
+			SetResult(&env).
 			SetQueryParam("force", strconv.FormatBool(api.force)).
 			Delete(endpoint)
 
 	if resp.IsError() {
 		var wpError WPRestError
 		err = json.Unmarshal(resp.Bytes(), &wpError)
-
 		if err != nil {
 			return
 		}
-
 		return page, &wpError
 	}
 
-	// TODO: need fixing of message = invalid suit value: trash
-	if err != nil && err.Error() == "invalid suit value: trash" {
-		err = nil
+	if err != nil {
+		return
 	}
 
-	return
+	if env.Previous != nil && env.Previous.ID != 0 {
+		return *env.Previous, nil
+	}
+
+	return env.Page, nil
 }

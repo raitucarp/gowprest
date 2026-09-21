@@ -27,6 +27,6 @@ func (s *OpenClosedStatus) UnmarshalJSON(data []byte) error {
 		*s = OpenClosedStatus(ocStatus)
 		return nil
 	default:
-		return fmt.Errorf("invalid suit value: %s", ocStatus)
+		return fmt.Errorf("invalid open/closed status: %s", ocStatus)
 	}
 }

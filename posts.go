@@ -8,8 +8,24 @@ import (
 )
 
 type Object struct {
-	Rendered  string `json:"rendered"`
-	Protected bool   `json:"protected,omitempty,omitzero"`
+	Rendered     string `json:"rendered"`
+	Raw          string `json:"raw,omitempty"`
+	Protected    bool   `json:"protected,omitempty,omitzero"`
+	BlockVersion int    `json:"block_version,omitempty"`
+}
+
+func (o *Object) UnmarshalJSON(b []byte) error {
+	trimmed := strings.TrimSpace(string(b))
+	if trimmed == "" || trimmed == "null" || trimmed == "[]" {
+		return nil
+	}
+	type Alias Object
+	var aux Alias
+	if err := json.Unmarshal(b, &aux); err != nil {
+		return err
+	}
+	*o = Object(aux)
+	return nil
 }
 
 type Date struct {
@@ -18,7 +34,15 @@ type Date struct {
 
 func (ct *Date) UnmarshalJSON(b []byte) error {
 	s := strings.Trim(string(b), "\"")
-	t, err := time.Parse("2006-01-02T15:04:05", s)
+	if s == "" || s == "null" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err == nil {
+		ct.Time = t
+		return nil
+	}
+	t, err = time.Parse("2006-01-02T15:04:05", s)
 	if err != nil {
 		return err
 	}
@@ -53,6 +77,8 @@ type Post struct {
 	Template          string           `json:"template,omitempty"`
 	Categories        []int            `json:"categories,omitempty"`
 	Tags              []int            `json:"tags,omitempty"`
+	Links             map[string]any   `json:"_links,omitempty"`
+	Embedded          map[string]any   `json:"_embedded,omitempty"`
 }
 
 type PostData struct {
@@ -146,8 +172,12 @@ func (api *ListPosts) ModifiedAfter(modifiedAfter time.Time) *ListPosts {
 	return api
 }
 
-func (api *ListPosts) Author(authorID int) *ListPosts {
-	api.arguments["author"] = strconv.Itoa(authorID)
+func (api *ListPosts) Author(authorIDs ...int) *ListPosts {
+	authors := []string{}
+	for _, authorID := range authorIDs {
+		authors = append(authors, strconv.Itoa(authorID))
+	}
+	api.arguments["author"] = strings.Join(authors, ",")
 	return api
 }
 
@@ -205,6 +235,11 @@ func (api *ListPosts) OrderDesc() *ListPosts {
 	return api
 }
 
+func (api *ListPosts) Order(order string) *ListPosts {
+	api.arguments["order"] = order
+	return api
+}
+
 func (api *ListPosts) OrderByAuthor() *ListPosts {
 	api.arguments["orderby"] = "author"
 	return api
@@ -255,13 +290,18 @@ func (api *ListPosts) OrderByTitle() *ListPosts {
 	return api
 }
 
+func (api *ListPosts) OrderBy(orderby string) *ListPosts {
+	api.arguments["orderby"] = orderby
+	return api
+}
+
 func (api *ListPosts) SearchColumns(columns ...string) *ListPosts {
 	api.arguments["search_columns"] = strings.Join(columns, ",")
 	return api
 }
 
-func (api *ListPosts) Slug(slug string) *ListPosts {
-	api.arguments["slug"] = slug
+func (api *ListPosts) Slug(slugs ...string) *ListPosts {
+	api.arguments["slug"] = strings.Join(slugs, ",")
 	return api
 }
 
@@ -300,6 +340,11 @@ func (api *ListPosts) StatusAny() *ListPosts {
 	return api
 }
 
+func (api *ListPosts) Status(statuses ...string) *ListPosts {
+	api.arguments["status"] = strings.Join(statuses, ",")
+	return api
+}
+
 func (api *ListPosts) TaxAnd() *ListPosts {
 	api.arguments["tax_relation"] = "AND"
 	return api
@@ -311,12 +356,30 @@ func (api *ListPosts) TaxOr() *ListPosts {
 }
 
 func (api *ListPosts) Categories(categories ...string) *ListPosts {
-	api.arguments["category"] = strings.Join(categories, ",")
+	api.arguments["categories"] = strings.Join(categories, ",")
+	return api
+}
+
+func (api *ListPosts) CategoryIDs(categoryIDs ...int) *ListPosts {
+	ids := []string{}
+	for _, id := range categoryIDs {
+		ids = append(ids, strconv.Itoa(id))
+	}
+	api.arguments["categories"] = strings.Join(ids, ",")
 	return api
 }
 
 func (api *ListPosts) CategoriesExclude(categories ...string) *ListPosts {
-	api.arguments["category_exclude"] = strings.Join(categories, ",")
+	api.arguments["categories_exclude"] = strings.Join(categories, ",")
+	return api
+}
+
+func (api *ListPosts) CategoryIDsExclude(categoryIDs ...int) *ListPosts {
+	ids := []string{}
+	for _, id := range categoryIDs {
+		ids = append(ids, strconv.Itoa(id))
+	}
+	api.arguments["categories_exclude"] = strings.Join(ids, ",")
 	return api
 }
 
@@ -325,8 +388,26 @@ func (api *ListPosts) Tags(tags ...string) *ListPosts {
 	return api
 }
 
+func (api *ListPosts) TagIDs(tagIDs ...int) *ListPosts {
+	ids := []string{}
+	for _, id := range tagIDs {
+		ids = append(ids, strconv.Itoa(id))
+	}
+	api.arguments["tags"] = strings.Join(ids, ",")
+	return api
+}
+
 func (api *ListPosts) TagsExclude(tags ...string) *ListPosts {
 	api.arguments["tags_exclude"] = strings.Join(tags, ",")
+	return api
+}
+
+func (api *ListPosts) TagIDsExclude(tagIDs ...int) *ListPosts {
+	ids := []string{}
+	for _, id := range tagIDs {
+		ids = append(ids, strconv.Itoa(id))
+	}
+	api.arguments["tags_exclude"] = strings.Join(ids, ",")
 	return api
 }
 
@@ -335,12 +416,36 @@ func (api *ListPosts) Sticky(sticky bool) *ListPosts {
 	return api
 }
 
+func (api *ListPosts) Embed() *ListPosts {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *ListPosts) Fields(fields ...string) *ListPosts {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *ListPosts) Do() (posts []Post, err error) {
-	_, err = api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" && (api.arguments["context"] == "edit" || api.arguments["status"] != "") {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Accept", "application/json").
 		SetResult(&posts).
 		SetQueryParams(api.arguments).
 		Get(api.client.endpoint + api.endpoint)
+
+	if resp.IsError() {
+		var wpError WPRestError
+		err = json.Unmarshal(resp.Bytes(), &wpError)
+		if err != nil {
+			return
+		}
+		return posts, &wpError
+	}
 
 	if err != nil {
 		return
@@ -355,13 +460,53 @@ type CreatePost struct {
 	post     PostData
 }
 
-func (api *Posts) Create(post PostData) *CreatePost {
+func (api *Posts) Create(post ...PostData) *CreatePost {
+	var p PostData
+	if len(post) > 0 {
+		p = post[0]
+	}
 	return &CreatePost{
 		endpoint: "/wp/v2/posts",
 		client:   api.client,
-		post:     post,
+		post:     p,
 	}
 }
+
+func (api *CreatePost) Title(title string) *CreatePost                 { api.post.Title = title; return api }
+func (api *CreatePost) Content(content string) *CreatePost             { api.post.Content = content; return api }
+func (api *CreatePost) Excerpt(excerpt string) *CreatePost             { api.post.Excerpt = excerpt; return api }
+func (api *CreatePost) Status(status PostStatus) *CreatePost           { api.post.Status = status; return api }
+func (api *CreatePost) StatusPublish() *CreatePost                     { api.post.Status = StatusPublished; return api }
+func (api *CreatePost) StatusDraft() *CreatePost                       { api.post.Status = StatusDraft; return api }
+func (api *CreatePost) StatusPending() *CreatePost                     { api.post.Status = StatusPending; return api }
+func (api *CreatePost) StatusPrivate() *CreatePost                     { api.post.Status = StatusPrivate; return api }
+func (api *CreatePost) StatusFuture() *CreatePost                      { api.post.Status = StatusFuture; return api }
+func (api *CreatePost) Slug(slug string) *CreatePost                   { api.post.Slug = slug; return api }
+func (api *CreatePost) Password(password string) *CreatePost           { api.post.Password = password; return api }
+func (api *CreatePost) Author(authorID int) *CreatePost                { api.post.Author = authorID; return api }
+func (api *CreatePost) FeaturedMedia(mediaID int) *CreatePost          { api.post.FeaturedMedia = mediaID; return api }
+func (api *CreatePost) CommentStatus(status OpenClosedStatus) *CreatePost {
+	api.post.CommentStatus = status
+	return api
+}
+func (api *CreatePost) PingStatus(status OpenClosedStatus) *CreatePost {
+	api.post.PingStatus = status
+	return api
+}
+func (api *CreatePost) Format(format Format) *CreatePost         { api.post.Format = format; return api }
+func (api *CreatePost) Meta(meta map[string]any) *CreatePost     { api.post.Meta = meta; return api }
+func (api *CreatePost) Sticky(sticky bool) *CreatePost           { api.post.Sticky = sticky; return api }
+func (api *CreatePost) Template(template string) *CreatePost     { api.post.Template = template; return api }
+func (api *CreatePost) Categories(categories ...int) *CreatePost {
+	api.post.Categories = append(api.post.Categories, categories...)
+	return api
+}
+func (api *CreatePost) Tags(tags ...int) *CreatePost {
+	api.post.Tags = append(api.post.Tags, tags...)
+	return api
+}
+func (api *CreatePost) Date(t time.Time) *CreatePost    { api.post.Date = &Date{Time: t}; return api }
+func (api *CreatePost) DateGMT(t time.Time) *CreatePost { api.post.DateGMT = &Date{Time: t}; return api }
 
 func (api *CreatePost) Do() (post Post, err error) {
 	resp, err := api.client.httpClient.R().
@@ -369,7 +514,6 @@ func (api *CreatePost) Do() (post Post, err error) {
 		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&post).
 		SetBody(api.post).
-		// SetError(err).
 		Post(api.client.endpoint + api.endpoint)
 
 	if resp.IsError() {
@@ -424,11 +568,21 @@ func (api *RetrievePost) Password(password string) *RetrievePost {
 	return api
 }
 
+func (api *RetrievePost) Embed() *RetrievePost {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *RetrievePost) Fields(fields ...string) *RetrievePost {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *RetrievePost) Do() (post *Post, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" && (api.arguments["context"] == "edit" || api.arguments["password"] != "") {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -449,11 +603,6 @@ func (api *RetrievePost) Do() (post *Post, err error) {
 		return post, &wpError
 	}
 
-	// TODO: need fixing of message = invalid suit value: trash
-	if err != nil && err.Error() == "invalid suit value: trash" {
-		err = nil
-	}
-
 	if err != nil {
 		return
 	}
@@ -467,13 +616,63 @@ type UpdatePost struct {
 	post     PostData
 }
 
-func (api *Posts) Update(post PostData) *UpdatePost {
+func (api *Posts) Update(post ...PostData) *UpdatePost {
+	var p PostData
+	endpoint := "/wp/v2/posts"
+	if len(post) > 0 {
+		p = post[0]
+		if p.ID != 0 {
+			endpoint = "/wp/v2/posts/" + strconv.Itoa(p.ID)
+		}
+	}
 	return &UpdatePost{
-		endpoint: "/wp/v2/posts/" + strconv.Itoa(post.ID),
+		endpoint: endpoint,
 		client:   api.client,
-		post:     post,
+		post:     p,
 	}
 }
+
+func (api *UpdatePost) ID(id int) *UpdatePost {
+	api.post.ID = id
+	api.endpoint = "/wp/v2/posts/" + strconv.Itoa(id)
+	return api
+}
+
+func (api *UpdatePost) Title(title string) *UpdatePost                 { api.post.Title = title; return api }
+func (api *UpdatePost) Content(content string) *UpdatePost             { api.post.Content = content; return api }
+func (api *UpdatePost) Excerpt(excerpt string) *UpdatePost             { api.post.Excerpt = excerpt; return api }
+func (api *UpdatePost) Status(status PostStatus) *UpdatePost           { api.post.Status = status; return api }
+func (api *UpdatePost) StatusPublish() *UpdatePost                     { api.post.Status = StatusPublished; return api }
+func (api *UpdatePost) StatusDraft() *UpdatePost                       { api.post.Status = StatusDraft; return api }
+func (api *UpdatePost) StatusPending() *UpdatePost                     { api.post.Status = StatusPending; return api }
+func (api *UpdatePost) StatusPrivate() *UpdatePost                     { api.post.Status = StatusPrivate; return api }
+func (api *UpdatePost) StatusFuture() *UpdatePost                      { api.post.Status = StatusFuture; return api }
+func (api *UpdatePost) Slug(slug string) *UpdatePost                   { api.post.Slug = slug; return api }
+func (api *UpdatePost) Password(password string) *UpdatePost           { api.post.Password = password; return api }
+func (api *UpdatePost) Author(authorID int) *UpdatePost                { api.post.Author = authorID; return api }
+func (api *UpdatePost) FeaturedMedia(mediaID int) *UpdatePost          { api.post.FeaturedMedia = mediaID; return api }
+func (api *UpdatePost) CommentStatus(status OpenClosedStatus) *UpdatePost {
+	api.post.CommentStatus = status
+	return api
+}
+func (api *UpdatePost) PingStatus(status OpenClosedStatus) *UpdatePost {
+	api.post.PingStatus = status
+	return api
+}
+func (api *UpdatePost) Format(format Format) *UpdatePost         { api.post.Format = format; return api }
+func (api *UpdatePost) Meta(meta map[string]any) *UpdatePost     { api.post.Meta = meta; return api }
+func (api *UpdatePost) Sticky(sticky bool) *UpdatePost           { api.post.Sticky = sticky; return api }
+func (api *UpdatePost) Template(template string) *UpdatePost     { api.post.Template = template; return api }
+func (api *UpdatePost) Categories(categories ...int) *UpdatePost {
+	api.post.Categories = append(api.post.Categories, categories...)
+	return api
+}
+func (api *UpdatePost) Tags(tags ...int) *UpdatePost {
+	api.post.Tags = append(api.post.Tags, tags...)
+	return api
+}
+func (api *UpdatePost) Date(t time.Time) *UpdatePost    { api.post.Date = &Date{Time: t}; return api }
+func (api *UpdatePost) DateGMT(t time.Time) *UpdatePost { api.post.DateGMT = &Date{Time: t}; return api }
 
 func (api *UpdatePost) Do() (post Post, err error) {
 	resp, err := api.client.httpClient.R().
@@ -481,7 +680,6 @@ func (api *UpdatePost) Do() (post Post, err error) {
 		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&post).
 		SetBody(api.post).
-		// SetError(err).
 		Post(api.client.endpoint + api.endpoint)
 
 	if resp.IsError() {
@@ -493,11 +691,6 @@ func (api *UpdatePost) Do() (post Post, err error) {
 		}
 
 		return post, &wpError
-	}
-
-	// TODO: need fixing of message = invalid suit value: trash
-	if err != nil && err.Error() == "invalid suit value: trash" {
-		err = nil
 	}
 
 	if err != nil {
@@ -527,13 +720,20 @@ func (api *DeletePost) Force() *DeletePost {
 	return api
 }
 
+type deletePostEnvelope struct {
+	Post
+	Deleted  bool  `json:"deleted"`
+	Previous *Post `json:"previous"`
+}
+
 func (api *DeletePost) Do() (post Post, err error) {
 	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.postId)
+	var env deletePostEnvelope
 	resp, err :=
 		api.client.httpClient.R().
 			SetHeader("Content-Type", "application/json").
 			SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
-			SetResult(&post).
+			SetResult(&env).
 			SetQueryParam("force", strconv.FormatBool(api.force)).
 			Delete(endpoint)
 
@@ -548,10 +748,13 @@ func (api *DeletePost) Do() (post Post, err error) {
 		return post, &wpError
 	}
 
-	// TODO: need fixing of message = invalid suit value: trash
-	if err != nil && err.Error() == "invalid suit value: trash" {
-		err = nil
+	if err != nil {
+		return
 	}
 
-	return
+	if env.Previous != nil && env.Previous.ID != 0 {
+		return *env.Previous, nil
+	}
+
+	return env.Post, nil
 }

@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+// CommentStatus defines the moderation state of a comment.
+type CommentStatus string
+
+const (
+	CommentStatusApprove CommentStatus = "approve"
+	CommentStatusHold    CommentStatus = "hold"
+	CommentStatusSpam    CommentStatus = "spam"
+	CommentStatusTrash   CommentStatus = "trash"
+)
+
 type Comment struct {
 	ID               int               `json:"id,omitempty"`
 	Post             int               `json:"post,omitempty"`
@@ -25,6 +35,8 @@ type Comment struct {
 	Type             string            `json:"type,omitempty"`
 	AuthorAvatarURLs map[string]string `json:"author_avatar_urls,omitempty"`
 	Meta             map[string]any    `json:"meta,omitempty"`
+	Links            map[string]any    `json:"_links,omitempty"`
+	Embedded         map[string]any    `json:"_embedded,omitempty"`
 }
 
 type CommentData struct {
@@ -42,11 +54,13 @@ type CommentData struct {
 	Content         string         `json:"content,omitempty"`
 	Status          string         `json:"status,omitempty"`
 	Meta            map[string]any `json:"meta,omitempty"`
+	Password        string         `json:"password,omitempty"`
 }
 
 type DeletedComment struct {
-	Previous Comment `json:"previous"`
-	Deleted  bool    `json:"deleted"`
+	Comment
+	Previous *Comment `json:"previous,omitempty"`
+	Deleted  bool     `json:"deleted"`
 }
 
 type Comments struct {
@@ -69,6 +83,11 @@ func (api *Comments) List() *ListComments {
 		client:    api.client,
 		arguments: make(map[string]string),
 	}
+}
+
+func (api *ListComments) Context(ctx string) *ListComments {
+	api.arguments["context"] = ctx
+	return api
 }
 
 func (api *ListComments) ContextView() *ListComments {
@@ -112,7 +131,7 @@ func (api *ListComments) Before(before time.Time) *ListComments {
 }
 
 func (api *ListComments) Author(authorIDs ...int) *ListComments {
-	authors := []string{}
+	authors := make([]string, 0, len(authorIDs))
 	for _, id := range authorIDs {
 		authors = append(authors, strconv.Itoa(id))
 	}
@@ -121,7 +140,7 @@ func (api *ListComments) Author(authorIDs ...int) *ListComments {
 }
 
 func (api *ListComments) AuthorExclude(authorIDs ...int) *ListComments {
-	authors := []string{}
+	authors := make([]string, 0, len(authorIDs))
 	for _, id := range authorIDs {
 		authors = append(authors, strconv.Itoa(id))
 	}
@@ -135,7 +154,7 @@ func (api *ListComments) AuthorEmail(email string) *ListComments {
 }
 
 func (api *ListComments) Exclude(excludeIDs ...int) *ListComments {
-	excludes := []string{}
+	excludes := make([]string, 0, len(excludeIDs))
 	for _, id := range excludeIDs {
 		excludes = append(excludes, strconv.Itoa(id))
 	}
@@ -144,7 +163,7 @@ func (api *ListComments) Exclude(excludeIDs ...int) *ListComments {
 }
 
 func (api *ListComments) Include(includeIDs ...int) *ListComments {
-	includes := []string{}
+	includes := make([]string, 0, len(includeIDs))
 	for _, id := range includeIDs {
 		includes = append(includes, strconv.Itoa(id))
 	}
@@ -154,6 +173,11 @@ func (api *ListComments) Include(includeIDs ...int) *ListComments {
 
 func (api *ListComments) Offset(offset int) *ListComments {
 	api.arguments["offset"] = strconv.Itoa(offset)
+	return api
+}
+
+func (api *ListComments) Order(order string) *ListComments {
+	api.arguments["order"] = order
 	return api
 }
 
@@ -167,8 +191,18 @@ func (api *ListComments) OrderDesc() *ListComments {
 	return api
 }
 
+func (api *ListComments) OrderBy(orderBy string) *ListComments {
+	api.arguments["orderby"] = orderBy
+	return api
+}
+
 func (api *ListComments) OrderByDate() *ListComments {
 	api.arguments["orderby"] = "date"
+	return api
+}
+
+func (api *ListComments) OrderByDateGMT() *ListComments {
+	api.arguments["orderby"] = "date_gmt"
 	return api
 }
 
@@ -197,8 +231,13 @@ func (api *ListComments) OrderByCommentType() *ListComments {
 	return api
 }
 
+func (api *ListComments) OrderByType() *ListComments {
+	api.arguments["orderby"] = "type"
+	return api
+}
+
 func (api *ListComments) Parent(parentIDs ...int) *ListComments {
-	parents := []string{}
+	parents := make([]string, 0, len(parentIDs))
 	for _, id := range parentIDs {
 		parents = append(parents, strconv.Itoa(id))
 	}
@@ -207,7 +246,7 @@ func (api *ListComments) Parent(parentIDs ...int) *ListComments {
 }
 
 func (api *ListComments) ParentExclude(parentIDs ...int) *ListComments {
-	parents := []string{}
+	parents := make([]string, 0, len(parentIDs))
 	for _, id := range parentIDs {
 		parents = append(parents, strconv.Itoa(id))
 	}
@@ -216,7 +255,7 @@ func (api *ListComments) ParentExclude(parentIDs ...int) *ListComments {
 }
 
 func (api *ListComments) Post(postIDs ...int) *ListComments {
-	posts := []string{}
+	posts := make([]string, 0, len(postIDs))
 	for _, id := range postIDs {
 		posts = append(posts, strconv.Itoa(id))
 	}
@@ -229,14 +268,49 @@ func (api *ListComments) Status(status string) *ListComments {
 	return api
 }
 
+func (api *ListComments) StatusApprove() *ListComments {
+	api.arguments["status"] = string(CommentStatusApprove)
+	return api
+}
+
+func (api *ListComments) StatusHold() *ListComments {
+	api.arguments["status"] = string(CommentStatusHold)
+	return api
+}
+
+func (api *ListComments) StatusSpam() *ListComments {
+	api.arguments["status"] = string(CommentStatusSpam)
+	return api
+}
+
+func (api *ListComments) StatusTrash() *ListComments {
+	api.arguments["status"] = string(CommentStatusTrash)
+	return api
+}
+
 func (api *ListComments) Type(commentType string) *ListComments {
 	api.arguments["type"] = commentType
 	return api
 }
 
+func (api *ListComments) Password(password string) *ListComments {
+	api.arguments["password"] = password
+	return api
+}
+
+func (api *ListComments) Embed() *ListComments {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *ListComments) Fields(fields ...string) *ListComments {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *ListComments) Do() (comments []Comment, err error) {
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -268,18 +342,115 @@ type CreateComment struct {
 	comment  CommentData
 }
 
-func (api *Comments) Create(comment CommentData) *CreateComment {
-	return &CreateComment{
+func (api *Comments) Create(comment ...CommentData) *CreateComment {
+	req := &CreateComment{
 		endpoint: "/wp/v2/comments",
 		client:   api.client,
-		comment:  comment,
 	}
+	if len(comment) > 0 {
+		req.comment = comment[0]
+	}
+	return req
+}
+
+func (api *CreateComment) Post(postID int) *CreateComment {
+	api.comment.Post = postID
+	return api
+}
+
+func (api *CreateComment) Parent(parentID int) *CreateComment {
+	api.comment.Parent = parentID
+	return api
+}
+
+func (api *CreateComment) Author(authorID int) *CreateComment {
+	api.comment.Author = authorID
+	return api
+}
+
+func (api *CreateComment) AuthorName(name string) *CreateComment {
+	api.comment.AuthorName = name
+	return api
+}
+
+func (api *CreateComment) AuthorEmail(email string) *CreateComment {
+	api.comment.AuthorEmail = email
+	return api
+}
+
+func (api *CreateComment) AuthorURL(url string) *CreateComment {
+	api.comment.AuthorURL = url
+	return api
+}
+
+func (api *CreateComment) AuthorIP(ip string) *CreateComment {
+	api.comment.AuthorIP = ip
+	return api
+}
+
+func (api *CreateComment) AuthorUserAgent(ua string) *CreateComment {
+	api.comment.AuthorUserAgent = ua
+	return api
+}
+
+func (api *CreateComment) Date(t time.Time) *CreateComment {
+	api.comment.Date = &Date{Time: t}
+	return api
+}
+
+func (api *CreateComment) DateGMT(t time.Time) *CreateComment {
+	api.comment.DateGMT = &Date{Time: t}
+	return api
+}
+
+func (api *CreateComment) Content(content string) *CreateComment {
+	api.comment.Content = content
+	return api
+}
+
+func (api *CreateComment) Status(status string) *CreateComment {
+	api.comment.Status = status
+	return api
+}
+
+func (api *CreateComment) StatusApprove() *CreateComment {
+	api.comment.Status = string(CommentStatusApprove)
+	return api
+}
+
+func (api *CreateComment) StatusHold() *CreateComment {
+	api.comment.Status = string(CommentStatusHold)
+	return api
+}
+
+func (api *CreateComment) StatusSpam() *CreateComment {
+	api.comment.Status = string(CommentStatusSpam)
+	return api
+}
+
+func (api *CreateComment) StatusTrash() *CreateComment {
+	api.comment.Status = string(CommentStatusTrash)
+	return api
+}
+
+func (api *CreateComment) Meta(meta map[string]any) *CreateComment {
+	api.comment.Meta = meta
+	return api
+}
+
+func (api *CreateComment) Password(password string) *CreateComment {
+	api.comment.Password = password
+	return api
 }
 
 func (api *CreateComment) Do() (comment Comment, err error) {
-	resp, err := api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Content-Type", "application/json").
-		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&comment).
 		SetBody(api.comment).
 		Post(api.client.endpoint + api.endpoint)
@@ -314,6 +485,11 @@ func (api *Comments) Retrieve(commentID int) *RetrieveComment {
 	}
 }
 
+func (api *RetrieveComment) Context(ctx string) *RetrieveComment {
+	api.arguments["context"] = ctx
+	return api
+}
+
 func (api *RetrieveComment) ContextView() *RetrieveComment {
 	api.arguments["context"] = "view"
 	return api
@@ -334,11 +510,21 @@ func (api *RetrieveComment) Password(password string) *RetrieveComment {
 	return api
 }
 
+func (api *RetrieveComment) Embed() *RetrieveComment {
+	api.arguments["_embed"] = "true"
+	return api
+}
+
+func (api *RetrieveComment) Fields(fields ...string) *RetrieveComment {
+	api.arguments["_fields"] = strings.Join(fields, ",")
+	return api
+}
+
 func (api *RetrieveComment) Do() (comment *Comment, err error) {
 	endpoint := api.client.endpoint + api.endpoint
 
 	restyClient := api.client.httpClient.R()
-	if api.client.auth.Username != "" && api.client.auth.Password != "" && api.arguments["context"] == "edit" {
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
 		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
 	}
 
@@ -370,18 +556,126 @@ type UpdateComment struct {
 	comment  CommentData
 }
 
-func (api *Comments) Update(comment CommentData) *UpdateComment {
+func (api *Comments) Update(comment ...CommentData) *UpdateComment {
+	endpoint := "/wp/v2/comments"
+	var c CommentData
+	if len(comment) > 0 {
+		c = comment[0]
+		if c.ID != 0 {
+			endpoint = "/wp/v2/comments/" + strconv.Itoa(c.ID)
+		}
+	}
 	return &UpdateComment{
-		endpoint: "/wp/v2/comments/" + strconv.Itoa(comment.ID),
+		endpoint: endpoint,
 		client:   api.client,
-		comment:  comment,
+		comment:  c,
 	}
 }
 
+func (api *UpdateComment) ID(commentID int) *UpdateComment {
+	api.comment.ID = commentID
+	api.endpoint = "/wp/v2/comments/" + strconv.Itoa(commentID)
+	return api
+}
+
+func (api *UpdateComment) Post(postID int) *UpdateComment {
+	api.comment.Post = postID
+	return api
+}
+
+func (api *UpdateComment) Parent(parentID int) *UpdateComment {
+	api.comment.Parent = parentID
+	return api
+}
+
+func (api *UpdateComment) Author(authorID int) *UpdateComment {
+	api.comment.Author = authorID
+	return api
+}
+
+func (api *UpdateComment) AuthorName(name string) *UpdateComment {
+	api.comment.AuthorName = name
+	return api
+}
+
+func (api *UpdateComment) AuthorEmail(email string) *UpdateComment {
+	api.comment.AuthorEmail = email
+	return api
+}
+
+func (api *UpdateComment) AuthorURL(url string) *UpdateComment {
+	api.comment.AuthorURL = url
+	return api
+}
+
+func (api *UpdateComment) AuthorIP(ip string) *UpdateComment {
+	api.comment.AuthorIP = ip
+	return api
+}
+
+func (api *UpdateComment) AuthorUserAgent(ua string) *UpdateComment {
+	api.comment.AuthorUserAgent = ua
+	return api
+}
+
+func (api *UpdateComment) Date(t time.Time) *UpdateComment {
+	api.comment.Date = &Date{Time: t}
+	return api
+}
+
+func (api *UpdateComment) DateGMT(t time.Time) *UpdateComment {
+	api.comment.DateGMT = &Date{Time: t}
+	return api
+}
+
+func (api *UpdateComment) Content(content string) *UpdateComment {
+	api.comment.Content = content
+	return api
+}
+
+func (api *UpdateComment) Status(status string) *UpdateComment {
+	api.comment.Status = status
+	return api
+}
+
+func (api *UpdateComment) StatusApprove() *UpdateComment {
+	api.comment.Status = string(CommentStatusApprove)
+	return api
+}
+
+func (api *UpdateComment) StatusHold() *UpdateComment {
+	api.comment.Status = string(CommentStatusHold)
+	return api
+}
+
+func (api *UpdateComment) StatusSpam() *UpdateComment {
+	api.comment.Status = string(CommentStatusSpam)
+	return api
+}
+
+func (api *UpdateComment) StatusTrash() *UpdateComment {
+	api.comment.Status = string(CommentStatusTrash)
+	return api
+}
+
+func (api *UpdateComment) Meta(meta map[string]any) *UpdateComment {
+	api.comment.Meta = meta
+	return api
+}
+
+func (api *UpdateComment) Password(password string) *UpdateComment {
+	api.comment.Password = password
+	return api
+}
+
 func (api *UpdateComment) Do() (comment Comment, err error) {
-	resp, err := api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Content-Type", "application/json").
-		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&comment).
 		SetBody(api.comment).
 		Post(api.client.endpoint + api.endpoint)
@@ -407,6 +701,7 @@ type DeleteComment struct {
 	client    *RestClient
 	commentID int
 	force     bool
+	password  string
 }
 
 func (api *Comments) Delete(commentID int) *DeleteComment {
@@ -422,11 +717,24 @@ func (api *DeleteComment) Force() *DeleteComment {
 	return api
 }
 
+func (api *DeleteComment) Password(password string) *DeleteComment {
+	api.password = password
+	return api
+}
+
 func (api *DeleteComment) Do() (deletedComment DeletedComment, err error) {
 	endpoint := api.client.endpoint + api.endpoint + "/" + strconv.Itoa(api.commentID)
-	resp, err := api.client.httpClient.R().
+	restyClient := api.client.httpClient.R()
+	if api.client.auth.Username != "" && api.client.auth.Password != "" {
+		restyClient.SetBasicAuth(api.client.auth.Username, api.client.auth.Password)
+	}
+
+	if api.password != "" {
+		restyClient.SetQueryParam("password", api.password)
+	}
+
+	resp, err := restyClient.
 		SetHeader("Content-Type", "application/json").
-		SetBasicAuth(api.client.auth.Username, api.client.auth.Password).
 		SetResult(&deletedComment).
 		SetQueryParam("force", strconv.FormatBool(api.force)).
 		Delete(endpoint)
@@ -442,6 +750,10 @@ func (api *DeleteComment) Do() (deletedComment DeletedComment, err error) {
 			return
 		}
 		return deletedComment, &wpError
+	}
+
+	if deletedComment.Previous != nil && deletedComment.Previous.ID != 0 {
+		deletedComment.Comment = *deletedComment.Previous
 	}
 
 	return
