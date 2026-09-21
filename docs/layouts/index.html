@@ -55,7 +55,7 @@
   <h2>Quick Example</h2>
   <p>Here is how quickly you can initialize a client, query published posts, and draft a new article:</p>
   
-  <pre><code class="language-go">package main
+  {{ $quickExample := `package main
 
 import (
 	"fmt"
@@ -85,13 +85,14 @@ func main() {
 	// 2. Create a new draft
 	post, err := client.Posts().Create().
 		Title("Built with gowprest").
-		Content("&lt;p&gt;Seamless WordPress publishing in Go!&lt;/p&gt;").
+		Content("<p>Seamless WordPress publishing in Go!</p>").
 		StatusDraft().
 		Do()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("Draft created ID: %d\n", post.ID)
-}</code></pre>
+}` }}
+  {{ highlight $quickExample "go" "" }}
 </div>
 {{ end }}
