@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ if .Title }}{{ .Title }} • {{ end }}{{ .Site.Title }}</title>
   <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/theme.js"></script>
+  <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
+  <script src="/js/theme.js?v={{ now.Unix }}"></script>
 </head>
 <body>
   {{ partial "header.html" . }}
