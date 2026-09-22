@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="100%" height="100%">
+  <defs>
+    <!-- Golang to WordPress Gradient -->
+    <linearGradient id="gowp-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00ADD8" />
+      <stop offset="45%" stop-color="#0073AA" />
+      <stop offset="100%" stop-color="#135E96" />
+    </linearGradient>
+
+    <!-- Glowing Go Cyan Gradient for API Brackets -->
+    <linearGradient id="go-cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#29D0F8" />
+      <stop offset="100%" stop-color="#00ADD8" />
+    </linearGradient>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#002d4a" flood-opacity="0.25" />
+    </filter>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background Shield / Squircle -->
+  <rect x="8" y="8" width="144" height="144" rx="34" fill="url(#gowp-gradient)" filter="url(#shadow)" />
+
+  <!-- Inner Tech Grid / Circuit Accent (Subtle REST API data layer) -->
+  <circle cx="80" cy="80" r="54" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 6" opacity="0.25" />
+  
+  <!-- Golang Signature Speed Lines (Top Left) -->
+  <path d="M 22 28 L 44 28" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.85" />
+  <path d="M 18 35 L 36 35" stroke="#29D0F8" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+  <path d="M 24 42 L 32 42" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.6" />
+
+  <!-- REST API Left Bracket { -->
+  <path d="M 40 52 C 32 52 30 56 30 64 C 30 71 28 75 22 77 C 28 79 30 83 30 90 C 30 98 32 102 40 102"
+        fill="none" stroke="url(#go-cyan-grad)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+  <!-- Left Endpoint Node -->
+  <circle cx="21" cy="77" r="3.5" fill="#29D0F8" />
+
+  <!-- REST API Right Bracket } -->
+  <path d="M 120 52 C 128 52 130 56 130 64 C 130 71 132 75 138 77 C 132 79 130 83 130 90 C 130 98 128 102 120 102"
+        fill="none" stroke="url(#go-cyan-grad)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+  <!-- Right Endpoint Node -->
+  <circle cx="139" cy="77" r="3.5" fill="#29D0F8" />
+
+  <!-- Central WordPress Circle Emblem -->
+  <circle cx="80" cy="80" r="36" fill="#0c233c" stroke="#ffffff" stroke-width="3" />
+  <circle cx="80" cy="80" r="33.5" fill="none" stroke="#29D0F8" stroke-width="1.2" opacity="0.7" />
+
+  <!-- WordPress Iconic 'W' Symbol -->
+  <g fill="#ffffff">
+    <!-- Left serif and stroke -->
+    <path d="M 57 63 C 58 63 59 63 60 63.5 C 60.8 63.9 61 64.6 61 65.5 C 61 66.5 60.5 68 59.8 69.8 L 68.2 92 L 72.8 79.5 L 69.5 70.2 C 68.7 68 68.2 66.2 68.2 65.2 C 68.2 64.2 68.8 63.5 70 63.2 C 70.8 63 71.8 63 73 63 L 72.8 64.5 C 71.2 64.7 70.7 65.4 71.2 66.8 L 77.2 83.2 L 81.5 71.2 C 82 69.8 82.2 68.5 82.2 67.5 C 82.2 65.8 81.2 64.8 79.2 64.5 L 79.5 63 C 80.8 63 82.2 63.2 83.8 63.2 C 85.2 63.2 86.8 63 88 63 L 87.8 64.5 C 86.2 64.8 85.5 65.5 84.8 67.2 L 77.8 86.8 L 73.5 99 C 73 100.2 72.2 100.2 71.5 99 L 63.8 77.8 L 57.8 64.6 C 57.2 63.4 56.5 63 55.2 63 Z" />
+  </g>
+
+  <!-- REST HTTP Method / Status Pulse Dots (Bottom Right) -->
+  <g opacity="0.95">
+    <circle cx="118" cy="126" r="4" fill="#00E676" />
+    <circle cx="104" cy="126" r="3" fill="#29D0F8" />
+    <circle cx="92" cy="126" r="2.5" fill="#ffffff" opacity="0.7" />
+  </g>
+</svg>

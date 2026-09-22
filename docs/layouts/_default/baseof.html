@@ -2,19 +2,22 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{{ if .Title }}{{ .Title }} • {{ end }}{{ .Site.Title }}</title>
   <meta name="description" content="{{ with .Description }}{{ . }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <meta name="theme-color" content="#0073AA">
   <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
   <script src="/js/theme.js?v={{ now.Unix }}"></script>
 </head>
-<body>
+<body class="{{ if .IsHome }}page-home{{ else }}page-docs{{ end }}">
   {{ partial "header.html" . }}
 
+  <!-- Mobile Drawer Backdrop Overlay -->
+  <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
   <div class="app-container">
-    {{ if not .IsHome }}
-      {{ partial "sidebar.html" . }}
-    {{ end }}
+    {{ partial "sidebar.html" . }}
 
     <main class="main-wrapper">
       <article class="content-article">

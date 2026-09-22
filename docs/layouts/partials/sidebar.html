@@ -1,4 +1,42 @@
-<aside class="sidebar">
+<aside id="site-sidebar" class="sidebar {{ if .IsHome }}sidebar-home-only-mobile{{ end }}" aria-label="Documentation Navigation">
+  <!-- Mobile Drawer Header -->
+  <div class="sidebar-mobile-header">
+    <div class="sidebar-mobile-title">
+      <img src="/images/logo.svg" alt="gowprest" width="24" height="24">
+      <span>Menu & Dokumentasi</span>
+    </div>
+    <button id="sidebar-close-btn" class="sidebar-close-btn" aria-label="Tutup menu">✕</button>
+  </div>
+
+  <!-- Mobile Quick Links (shown in drawer on mobile) -->
+  <div class="sidebar-group sidebar-group-mobile-nav">
+    <div class="sidebar-title">Menu Utama</div>
+    <ul class="sidebar-menu">
+      <li class="sidebar-item">
+        <a href="/" class="sidebar-link {{ if .IsHome }}active{{ end }}">Beranda</a>
+      </li>
+      <li class="sidebar-item">
+        <a href="/getting-started/quickstart/" class="sidebar-link {{ if eq .RelPermalink "/getting-started/quickstart/" }}active{{ end }}">Quickstart</a>
+      </li>
+      <li class="sidebar-item">
+        <a href="/guides/content-management/" class="sidebar-link {{ if eq .RelPermalink "/guides/content-management/" }}active{{ end }}">Guides</a>
+      </li>
+      <li class="sidebar-item">
+        <a href="/api-reference/" class="sidebar-link {{ if eq .RelPermalink "/api-reference/" }}active{{ end }}">API Reference</a>
+      </li>
+      <li class="sidebar-item">
+        <a href="https://pkg.go.dev/github.com/raitucarp/gowprest" target="_blank" rel="noopener" class="sidebar-link ext-link">
+          GoDoc Package ↗
+        </a>
+      </li>
+      <li class="sidebar-item">
+        <a href="https://github.com/raitucarp/gowprest" target="_blank" rel="noopener" class="sidebar-link ext-link">
+          GitHub Repository ↗
+        </a>
+      </li>
+    </ul>
+  </div>
+
   <div class="sidebar-group">
     <div class="sidebar-title">Getting Started</div>
     <ul class="sidebar-menu">
